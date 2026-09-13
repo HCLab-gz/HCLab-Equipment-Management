@@ -1,0 +1,148 @@
+import type { Snapshot, Profile, Equipment } from '../lib/types';
+import { dateKey, offsetDay } from '../lib/domain';
+export const admin: Profile = {
+  id: 'demo-admin',
+  name: '实验室管理员',
+  email: 'admin@hclab.demo',
+  student_id: '',
+  project: '公共设备',
+  role: 'admin',
+  banned: false,
+  suspended_until: null,
+  violations_count: 0,
+};
+export const student: Profile = {
+  ...admin,
+  id: 'demo-user',
+  name: '陈同学',
+  email: 'student@hclab.demo',
+  student_id: '演示账号',
+  project: '具身智能',
+  role: 'user',
+};
+export function seed(): Snapshot {
+  const rows: [string, string, string, string, '504' | '505', string, string][] = [
+    [
+      '宇树 G1 人形机器人',
+      'Unitree G1',
+      '机器人本体',
+      '具身智能',
+      '504',
+      '机器人停放区 · A01',
+      'g1',
+    ],
+    [
+      'Franka 协作机械臂',
+      'Franka Research 3',
+      '机器人本体',
+      '灵巧操作',
+      '504',
+      '固定实验台 · B01',
+      'franka',
+    ],
+    [
+      'Tron1 双足机器人',
+      'LimX Tron1',
+      '机器人本体',
+      '运动控制',
+      '505',
+      '机器人停放区 · A01',
+      'tron',
+    ],
+    ['Oli 人形机器人', 'LimX Oli', '机器人本体', '具身智能', '505', '机器人停放区 · A02', 'oli'],
+    [
+      'Lift2 升降平台',
+      'Lift2（型号待核对）',
+      '机器人本体',
+      '灵巧操作',
+      '504',
+      '移动平台区 · A03',
+      'lift',
+    ],
+    [
+      'RGB-D 深度相机',
+      'RealSense D435i（示例）',
+      '机器人传感器',
+      '公共设备',
+      '505',
+      '铁皮置物架 · 传感器格 S01',
+      'camera',
+    ],
+    [
+      '触觉传感器',
+      '型号待录入',
+      '机器人传感器',
+      '灵巧操作',
+      '504',
+      '传感器收纳柜 · S02',
+      'tactile',
+    ],
+    ['数字示波器', '型号待录入', '工具', '公共设备', '505', '电子测试台 · E01', 'scope'],
+    [
+      '精密工具套装',
+      '螺丝刀 / 扳手 / 电工工具',
+      '工具',
+      '公共设备',
+      '504',
+      '绿色工作台 · 工具区 T01',
+      'tools',
+    ],
+  ];
+  const equipment: Equipment[] = rows.map(
+    ([name, model, category, project, room, location, id], i) => ({
+      id,
+      name,
+      model,
+      category,
+      project,
+      room,
+      location,
+      manager_id: admin.id,
+      manager_name: admin.name,
+      status: i === 3 ? 'maintenance' : 'available',
+      open_time: '08:00',
+      close_time: '22:00',
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      description: '示例设备，用于展示预约和管理流程。正式启用前请按真实资产信息修改或新增。',
+      precautions:
+        '须完成管理员专项培训；使用前检查供电、连接和工作区域；实验结束后按指定位置归还。具体操作规程由管理员补充。',
+      image_url: '',
+      asset_code: `HCL-${String(i + 1).padStart(3, '0')}`,
+      created_at: new Date().toISOString(),
+    }),
+  );
+  const tomorrow = offsetDay(dateKey(), 1);
+  return {
+    equipment,
+    profiles: [admin, student],
+    bookings: [
+      {
+        id: 'demo-booking',
+        equipment_id: 'franka',
+        user_id: student.id,
+        user_name: student.name,
+        starts_at: `${tomorrow}T14:00:00+08:00`,
+        ends_at: `${tomorrow}T16:00:00+08:00`,
+        purpose: '机械臂抓取实验（演示）',
+        status: 'pending',
+        review_note: '',
+        return_note: '',
+        returned_at: null,
+        parent_id: null,
+        created_at: new Date().toISOString(),
+      },
+    ],
+    notices: [
+      {
+        id: 'welcome',
+        user_id: student.id,
+        title: '欢迎来到 HCLab',
+        body: '这是一条演示通知。预约审批、归还和准入状态更新将在这里显示。',
+        read: false,
+        created_at: new Date().toISOString(),
+      },
+    ],
+    violations: [],
+    busy: [],
+  };
+}

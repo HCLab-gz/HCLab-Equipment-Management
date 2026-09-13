@@ -1,0 +1,59 @@
+import { it, expect } from 'vitest';
+import { createDemoService } from '../src/lib/demo';
+import { dateKey, offsetDay } from '../src/lib/domain';
+const memory = () => {
+  const m = new Map<string, string>();
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      m.set(k, v);
+    },
+    removeItem: (k: string) => {
+      m.delete(k);
+    },
+  };
+};
+it('普通用户不能新增设备或批准预约，自己可以提交并取消', async () => {
+  const api = createDemoService(memory());
+  await api.demoLogin!('user');
+  await expect(api.saveEquipment({ name: '越权设备' })).rejects.toThrow();
+  await expect(api.bookingAction('demo-booking', 'approve')).rejects.toThrow();
+  const d = offsetDay(dateKey(), 1),
+    input = {
+      equipment_id: 'g1',
+      starts_at: `${d}T09:00:00+08:00`,
+      ends_at: `${d}T10:00:00+08:00`,
+      purpose: '测试抓取',
+    };
+  await api.book(input);
+  await expect(api.book(input)).rejects.toThrow();
+  const b = (await api.snapshot()).bookings.find((x) => x.equipment_id === 'g1')!;
+  expect(b.status).toBe('pending');
+  await api.bookingAction(b.id, 'cancel');
+  expect((await api.snapshot()).bookings.find((x) => x.id === b.id)?.status).toBe('cancelled');
+});
+it('管理员批准后不能再次驳回；未到时间不能开始使用', async () => {
+  const api = createDemoService(memory());
+  await api.demoLogin!('admin');
+  await api.bookingAction('demo-booking', 'approve');
+  await expect(api.bookingAction('demo-booking', 'reject', '测试')).rejects.toThrow();
+  await api.demoLogin!('user');
+  await expect(api.bookingAction('demo-booking', 'checkout')).rejects.toThrow();
+});
+it('未登录看不到个人记录，连续违规后阻止预约', async () => {
+  const api = createDemoService(memory());
+  expect((await api.snapshot()).bookings).toHaveLength(0);
+  await api.demoLogin!('admin');
+  await api.recordViolation('demo-user', '未归位');
+  await api.recordViolation('demo-user', '再次超时');
+  await api.demoLogin!('user');
+  const d = offsetDay(dateKey(), 1);
+  await expect(
+    api.book({
+      equipment_id: 'g1',
+      starts_at: `${d}T09:00:00+08:00`,
+      ends_at: `${d}T10:00:00+08:00`,
+      purpose: '测试',
+    }),
+  ).rejects.toThrow();
+});
