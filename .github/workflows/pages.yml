@@ -1,12 +1,16 @@
-name: Test and deploy GitHub Pages
+name: Test and build (manual Pages publish)
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: '公开发布到 GitHub Pages（默认关闭；确认需要上线后才勾选）'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -27,9 +31,15 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
         with:
           path: dist
   deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

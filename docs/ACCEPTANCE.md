@@ -1,6 +1,13 @@
 # 第一版验收记录
 
-日期：2026-09-13。第一版演示已发布，仓库现归属 [HCLab-gz/HCLab-Equipment-Management](https://github.com/HCLab-gz/HCLab-Equipment-Management)，网站入口为 [GitHub Pages 演示版](https://hclab-gz.github.io/HCLab-Equipment-Management/)。Supabase 项目尚未连接，当前不是多人共享预约系统。
+日期：2026-09-13。仓库现归属 [HCLab-gz/HCLab-Equipment-Management](https://github.com/HCLab-gz/HCLab-Equipment-Management)。Supabase 项目尚未连接，当前不是多人共享预约系统。
+
+## 暂缓公开发布
+
+- 用户要求只下线网站，源码仓库保持公开。
+- 工作流已改为推送时只测试和构建；上传及部署仅在手动运行并明确勾选 publish 时执行，默认关闭。
+- 仓库转移后，当前命令行账号 YixFeng 只有代码写入权限，无法取消既有 Pages 发布。实际下线需 HCLab-gz 在 Settings → Pages 选择 Unpublish site，完成后再验证公网返回状态。
+- 下列上线结果是历史验收记录，不代表网站应继续公开。
 
 ## 仓库归属调整
 
