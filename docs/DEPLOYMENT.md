@@ -50,7 +50,9 @@ where email = '管理员的注册邮箱';
 
 ## 4. 创建仓库并部署
 
-在本机 `gh auth login` 登录 GitHub 后，从本项目根目录运行：
+本项目的仓库与 Pages 已创建：[源码仓库](https://github.com/YixFeng/HCLab-Equipment-Management)、[演示网站](https://yixfeng.github.io/HCLab-Equipment-Management/)。日常更新只需提交并推送 `main`，GitHub Actions 会自动测试、构建和发布，无需重复初始化。
+
+以下命令仅供在全新仓库首次部署时参考；当前仓库请跳过：
 
 ```bash
 git init -b main

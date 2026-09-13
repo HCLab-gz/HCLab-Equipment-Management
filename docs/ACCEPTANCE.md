@@ -1,6 +1,13 @@
 # 第一版验收记录
 
-日期：2026-09-13。当前交付为已实现源码、可运行本地演示及生产部署配置。远程 GitHub 仓库与 Supabase 项目尚未完成连接，不能视作已上线多人系统。
+日期：2026-09-13。源码已推送到 [YixFeng/HCLab-Equipment-Management](https://github.com/YixFeng/HCLab-Equipment-Management)，[GitHub Pages 演示版](https://yixfeng.github.io/HCLab-Equipment-Management/) 已发布。Supabase 项目尚未连接，当前不是多人共享预约系统。
+
+## 发布验证
+
+- [首次发布 Actions](https://github.com/YixFeng/HCLab-Equipment-Management/actions/runs/34759088080) 的安装、测试、构建与部署步骤全部成功。
+- Pages 公网首页返回 HTTP 200，HTML 标题及项目子目录中的脚本、样式引用正确。
+- 本地生产构建预览页面显示正常，控制台无错误或警告。公网浏览器验收发生连接超时，尚未完成公网交互复测。
+- 仓库已开启 Issues，后续可提交界面和功能调整需求。
 
 ## 自动验证
 
@@ -27,7 +34,6 @@
 
 ## 尚需真实环境验证
 
-- GitHub 仓库创建、Actions 成功与 Pages 公网地址。
 - Supabase 云端迁移、邮件验证、实际图片上传、跨浏览器数据同步及并发负载。
 - 课题组确认条例初稿；各设备管理员补充专用操作规程、图片和真实资产位置。
 - 实体门禁权限由管理员人工同步，本版没有门禁硬件接口。
