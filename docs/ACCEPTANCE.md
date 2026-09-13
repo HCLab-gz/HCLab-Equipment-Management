@@ -5,8 +5,8 @@
 ## 暂缓公开发布
 
 - 用户要求只下线网站，源码仓库保持公开。
-- 工作流已改为推送时只测试和构建；上传及部署仅在手动运行并明确勾选 publish 时执行，默认关闭。
-- 仓库转移后，当前命令行账号 YixFeng 只有代码写入权限，无法取消既有 Pages 发布。实际下线需 HCLab-gz 在 Settings → Pages 选择 Unpublish site，完成后再验证公网返回状态。
+- 工作流已改为推送时只测试和构建；上传及部署仅在手动运行并明确勾选 publish 时执行，默认关闭。[关闭自动发布后的 Actions](https://github.com/HCLab-gz/HCLab-Equipment-Management/actions/runs/34766404873) 已成功，Pages 产物上传步骤和 deploy 作业均为 skipped。
+- HCLab-gz 已在 Settings → Pages 取消发布；公网入口 `https://hclab-gz.github.io/HCLab-Equipment-Management/` 已验证返回 HTTP 404，页面标题为“Site not found · GitHub Pages”。
 - 下列上线结果是历史验收记录，不代表网站应继续公开。
 
 ## 仓库归属调整

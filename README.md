@@ -33,9 +33,9 @@ npm run preview
 
 详细步骤见 [部署说明](docs/DEPLOYMENT.md)。需要一个你控制的 Supabase 项目。生产模式没有默认管理员密码，也没有演示切换入口。
 
-当前安排为**暂缓网站公开发布，源码仓库保持公开**：[GitHub 仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) · [提交 issue](https://github.com/HCLab-gz/HCLab-Equipment-Management/issues)。本地可使用 `npm run dev` 继续评审。
+当前**网站已取消公开发布，源码仓库保持公开**：[GitHub 仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) · [提交 issue](https://github.com/HCLab-gz/HCLab-Equipment-Management/issues)。本地可使用 `npm run dev` 继续评审。
 
-推送 `main` 只测试和构建，不会发布网站。未来确认需要公开时，由维护者手动运行 Actions 并明确勾选 `publish`。既有站点需要由仓库管理员在 Settings → Pages 中取消发布，操作说明见部署文档。
+推送 `main` 只测试和构建，不会发布网站。未来确认需要公开时，由维护者手动运行 Actions 并明确勾选 `publish`。如需再次下线，由仓库管理员在 Settings → Pages 中取消发布，操作说明见部署文档。
 
 默认运行演示模式，登录页可体验普通用户和管理员流程。正式账号和多人共享预约需要先按部署说明连接 Supabase，不能将当前浏览器中的演示记录用于实际预约。
 
