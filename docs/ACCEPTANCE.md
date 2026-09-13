@@ -1,10 +1,16 @@
 # 第一版验收记录
 
-日期：2026-09-13。源码已推送到 [YixFeng/HCLab-Equipment-Management](https://github.com/YixFeng/HCLab-Equipment-Management)，[GitHub Pages 演示版](https://yixfeng.github.io/HCLab-Equipment-Management/) 已发布。Supabase 项目尚未连接，当前不是多人共享预约系统。
+日期：2026-09-13。第一版演示已发布，仓库现归属 [HCLab-gz/HCLab-Equipment-Management](https://github.com/HCLab-gz/HCLab-Equipment-Management)，网站入口为 [GitHub Pages 演示版](https://hclab-gz.github.io/HCLab-Equipment-Management/)。Supabase 项目尚未连接，当前不是多人共享预约系统。
+
+## 仓库归属调整
+
+- 从 YixFeng 转移至 HCLab-gz，接收方已接受转移。仓库 ID 仍为 `1368397092`，转移前后 main 提交均为 `b8b7180190f628ab4575bd969bd032bda3a92d80`，保留已有提交历史及 Issues 功能（转移时无未关闭 Issue）。
+- 本地 origin、README、部署示例及未来账号服务的登录回调地址说明已更新至 HCLab-gz。
+- GitHub Pages 使用 `https://hclab-gz.github.io/HCLab-Equipment-Management/`。旧 Pages 地址不应继续作为访问入口；历史验收结果见下文，新地址部署结果以仓库 Actions 为准。
 
 ## 发布验证
 
-- [首次发布 Actions](https://github.com/YixFeng/HCLab-Equipment-Management/actions/runs/34759088080) 的安装、测试、构建与部署步骤全部成功。
+- [首次发布 Actions](https://github.com/HCLab-gz/HCLab-Equipment-Management/actions/runs/34759088080) 的安装、测试、构建与部署步骤全部成功。
 - Pages 公网首页返回 HTTP 200，HTML 标题及项目子目录中的脚本、样式引用正确。
 - 本地生产构建预览页面显示正常，控制台无错误或警告。公网浏览器验收发生连接超时，尚未完成公网交互复测。
 - 仓库已开启 Issues，后续可提交界面和功能调整需求。

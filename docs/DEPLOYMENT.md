@@ -15,7 +15,7 @@ GitHub Pages 托管 HTML/CSS/JavaScript，无法自身保存跨用户预约或�
 在 Authentication 配置 Email 登录，启用邮箱验证，密码最短长度设为 10。设置 Site URL：
 
 ```text
-https://yixfeng.github.io/HCLab-Equipment-Management/
+https://hclab-gz.github.io/HCLab-Equipment-Management/
 ```
 
 将同一地址加入 Redirect URLs。本地测试可另加 `http://127.0.0.1:5173/`。不要向前端提供 service_role 或 secret key。
@@ -50,7 +50,7 @@ where email = '管理员的注册邮箱';
 
 ## 4. 创建仓库并部署
 
-本项目的仓库与 Pages 已创建：[源码仓库](https://github.com/YixFeng/HCLab-Equipment-Management)、[演示网站](https://yixfeng.github.io/HCLab-Equipment-Management/)。日常更新只需提交并推送 `main`，GitHub Actions 会自动测试、构建和发布，无需重复初始化。
+本项目的仓库与 Pages 已创建：[源码仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management)、[演示网站](https://hclab-gz.github.io/HCLab-Equipment-Management/)。日常更新只需提交并推送 `main`，GitHub Actions 会自动测试、构建和发布，无需重复初始化。
 
 以下命令仅供在全新仓库首次部署时参考；当前仓库请跳过：
 
@@ -58,8 +58,8 @@ where email = '管理员的注册邮箱';
 git init -b main
 git add .
 git commit -m "feat: build HCLab equipment management platform"
-gh repo create YixFeng/HCLab-Equipment-Management --public --source=. --remote=origin --push
-gh api --method POST repos/YixFeng/HCLab-Equipment-Management/pages -f build_type=workflow
+gh repo create HCLab-gz/HCLab-Equipment-Management --public --source=. --remote=origin --push
+gh api --method POST repos/HCLab-gz/HCLab-Equipment-Management/pages -f build_type=workflow
 ```
 
 如果仓库已存在，不要再次创建或覆盖；添加正确 remote 后正常提交和推送。仓库公开源码用于 GitHub Pages，不包含任何真实学生记录、密码或服务端密钥。GitHub 账号计划如允许私有仓库 Pages，也可自行改为私有。
