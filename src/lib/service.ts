@@ -1,7 +1,9 @@
 import type { DataService } from './types';
 import { readBrowserConfig } from './browserConfig';
 export async function loadService(): Promise<DataService> {
-  const { mode } = readBrowserConfig();
+  readBrowserConfig();
+  // Keep the mode a build-time constant so unused adapters and demo answers are removed.
+  const mode = import.meta.env.VITE_DATA_MODE ?? 'demo';
   if (mode === 'cloudbase') {
     const { createCloudBaseService } = await import('./cloudbase');
     return createCloudBaseService();
