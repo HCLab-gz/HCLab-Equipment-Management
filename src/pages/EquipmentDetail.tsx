@@ -14,6 +14,7 @@ import {
   dateKey,
   offsetDay,
   slots,
+  slotEnd,
   overlaps,
   validateBooking,
   accessState,
@@ -39,14 +40,12 @@ export function EquipmentDetail() {
     [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!e) return;
-    const startTime = parent ? timeKey(new Date(parent.ends_at)) : e.open_time.slice(0, 5);
-    const next = new Date(
-      `${parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1)}T${startTime}:00+08:00`,
-    );
-    next.setTime(+next + 1800000);
+    const startTime = parent
+      ? timeKey(new Date(parent.ends_at))
+      : (slots(e.open_time, e.close_time)[0] ?? '');
     setDay(parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1));
     setStart(startTime);
-    setEnd(timeKey(next));
+    setEnd(startTime ? slotEnd(startTime) : '');
   }, [e?.id, parent?.id]);
   if (!e)
     return (
@@ -55,7 +54,7 @@ export function EquipmentDetail() {
       </Empty>
     );
   const allSlots = slots(e.open_time, e.close_time),
-    ends = [...allSlots.slice(1), e.close_time.slice(0, 5)],
+    ends = allSlots.map(slotEnd),
     occupied = data.busy.filter((b) => b.equipment_id === e.id),
     blocked = (t: string) => {
       const next = ends[allSlots.indexOf(t)];
@@ -223,7 +222,7 @@ export function EquipmentDetail() {
                   ))}
                 </div>
                 <p className="muted calendar-help">
-                  点选起始时段，再在右侧调整结束时间。待审批申请也会暂占时段。
+                  点选起始时段，再在右侧调整结束时间。仅列出开放范围内完整的半小时；待审批申请也会暂占时段。
                 </p>
               </>
             ) : (
@@ -315,6 +314,7 @@ export function EquipmentDetail() {
                 className="button full"
                 disabled={
                   busy ||
+                  !allSlots.length ||
                   e.status !== 'available' ||
                   !accessState(user) ||
                   purpose.trim().length < 2

@@ -119,13 +119,36 @@ export function gradeExam(correct: number[], answers: Record<number, number>) {
     passed: correct.length === 10 && Object.keys(answers).length === 10 && score === 100,
   };
 }
+function timeMinutes(value: string) {
+  if (!/^([01]\d|2[0-3]):[0-5]\d(?::00)?$/.test(value)) return NaN;
+  return Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+}
+function formatMinutes(value: number) {
+  return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+}
+export function slotEnd(start: string) {
+  return formatMinutes(timeMinutes(start) + 30);
+}
+export function equipmentScheduleError(
+  open: string | undefined,
+  close: string | undefined,
+  weekdays: number[] | undefined,
+): string | null {
+  if (!weekdays?.length || weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6))
+    return '请至少选择一个有效的每周开放日';
+  const start = timeMinutes(open ?? ''),
+    end = timeMinutes(close ?? '');
+  if (!Number.isFinite(start) || !Number.isFinite(end))
+    return '请填写有效的每日开放时间和结束时间（精确到分钟）';
+  if (end <= start) return '每日结束时间必须晚于开放时间';
+  if (!slots(open!, close!).length)
+    return '开放范围至少需要包含一个完整的半小时预约时段，例如 08:30—09:00';
+  return null;
+}
 export function slots(open: string, close: string) {
   const result: string[] = [];
-  let min = Number(open.slice(0, 2)) * 60 + Number(open.slice(3, 5));
-  const max = Number(close.slice(0, 2)) * 60 + Number(close.slice(3, 5));
-  for (; min < max; min += 30)
-    result.push(
-      `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`,
-    );
+  const first = Math.ceil(timeMinutes(open) / 30) * 30,
+    max = timeMinutes(close);
+  for (let min = first; min + 30 <= max; min += 30) result.push(formatMinutes(min));
   return result;
 }

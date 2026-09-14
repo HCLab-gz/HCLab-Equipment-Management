@@ -32,6 +32,8 @@ function serviceError(error: unknown, operation: 'auth' | 'data' | 'register' | 
   if (e.code === 'P0001' && typeof e.message === 'string' && /[\u3400-\u9fff]/.test(e.message))
     return new Error(e.message);
   if (e.code === '42501') return new Error('没有执行此操作的权限，请确认登录账号');
+  if (['23514', '23502', '22001', '22007', '22008', '22P02'].includes(String(e.code)))
+    return new Error('填写内容不符合要求，请检查必填信息、字数、开放日期和起止时间');
   return new Error(
     operation === 'register'
       ? '注册服务暂时不可用，请稍后重试'

@@ -81,10 +81,33 @@ beforeAll(async () => {
     );
   }
   await db.exec(readFileSync(migration, 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/008_equipment_hours.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
   await db?.close();
+});
+it('Supabase 设备开放时间同样支持 00:00—23:59', async () => {
+  await identity(owner);
+  const id = await rpc('save_equipment', [
+    {
+      name: '时间回归测试',
+      model: '测试型号',
+      category: '工具',
+      project: '公共设备',
+      room: '505',
+      location: '指定位置',
+      manager_id: owner,
+      status: 'available',
+      open_time: '00:00',
+      close_time: '23:59',
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      asset_code: randomUUID(),
+    },
+  ]);
+  expect((await rpc('get_snapshot')).equipment.find((e: any) => e.id === id).close_time).toBe(
+    '23:59:00',
+  );
 });
 it('Supabase 注册触发器必须将管理员申请置为待审核普通身份', async () => {
   applicant = await register('admin');

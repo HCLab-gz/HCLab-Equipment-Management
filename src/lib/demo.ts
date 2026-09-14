@@ -2,7 +2,14 @@ import { seed, superAdministrator } from '../data/seed';
 import { questions } from '../data/questions';
 import { RULES_VERSION } from '../data/rules';
 import { isApproved, isAdministrator, isSuperAdministrator, ROLE_LABELS } from './membership';
-import { ACTIVE_STATUSES, accessState, nextPenalty, overlaps, validateBooking } from './domain';
+import {
+  ACTIVE_STATUSES,
+  accessState,
+  nextPenalty,
+  overlaps,
+  validateBooking,
+  equipmentScheduleError,
+} from './domain';
 import type { DataService, Snapshot, Equipment, Profile, AnswerQuestion } from './types';
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Database = Snapshot & { passwords: Record<string, { salt: string; hash: string }> };
@@ -274,13 +281,12 @@ export function createDemoService(storage: StorageLike): DataService {
         throw new Error('请完整填写设备必填信息');
       if (!db.profiles.some((p) => p.id === input.manager_id && isAdministrator(p)))
         throw new Error('请选择有效的负责管理员');
-      if (
-        !input.weekdays?.length ||
-        !input.open_time ||
-        !input.close_time ||
-        input.open_time >= input.close_time
-      )
-        throw new Error('请设置有效的开放日期和时间');
+      const scheduleError = equipmentScheduleError(
+        input.open_time,
+        input.close_time,
+        input.weekdays,
+      );
+      if (scheduleError) throw new Error(scheduleError);
       const existing = db.equipment.find((e) => e.id === input.id),
         id = existing?.id ?? crypto.randomUUID();
       const eq = {

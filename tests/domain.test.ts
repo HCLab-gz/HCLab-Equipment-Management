@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { overlaps, validateBooking, accessState, nextPenalty, gradeExam } from '../src/lib/domain';
+import {
+  overlaps,
+  validateBooking,
+  accessState,
+  nextPenalty,
+  gradeExam,
+  slots,
+  slotEnd,
+  equipmentScheduleError,
+} from '../src/lib/domain';
 const equipment = {
   status: 'available',
   weekdays: [1, 2, 3, 4, 5, 6, 0],
@@ -7,6 +16,26 @@ const equipment = {
   close_time: '22:00',
 };
 describe('预约边界', () => {
+  it('23:59 和非半点开放时间只生成开放范围内完整的半小时时段', () => {
+    expect(slots('23:00', '23:59')).toEqual(['23:00']);
+    expect(slots('08:10:00', '10:15:00')).toEqual(['08:30', '09:00', '09:30']);
+    expect(slots('08:10', '08:40')).toEqual([]);
+    expect(slots('00:00', '23:59')).toHaveLength(47);
+    const e = { ...equipment, open_time: '08:10', close_time: '10:15' };
+    for (const start of slots(e.open_time, e.close_time))
+      expect(
+        validateBooking(e, `2099-01-04T${start}+08:00`, `2099-01-04T${slotEnd(start)}+08:00`),
+      ).toBeNull();
+  });
+  it('设备开放时间按分钟设置，无有效时段或开放日时给出明确提示', () => {
+    expect(equipmentScheduleError('00:00', '23:59', [0, 1, 2, 3, 4, 5, 6])).toBeNull();
+    expect(equipmentScheduleError('08:10:00', '10:15:00', [1])).toBeNull();
+    expect(equipmentScheduleError('08:00', '10:00', [])).toMatch(/开放日/);
+    expect(equipmentScheduleError('10:00', '08:00', [1])).toMatch(/结束时间/);
+    expect(equipmentScheduleError('08:10', '08:40', [1])).toMatch(/完整.*半小时/);
+    expect(equipmentScheduleError('25:00', '26:00', [1])).toMatch(/有效.*时间/);
+    expect(equipmentScheduleError('08:00:30', '10:00', [1])).toMatch(/有效.*时间/);
+  });
   it('相邻预约允许，交叉和包含拒绝', () => {
     expect(
       overlaps(

@@ -15,6 +15,7 @@ GitHub Pages 托管 HTML/CSS/JavaScript，无法自身保存跨用户预约或�
 5. `supabase/migrations/005_rules_v3.sql`：更新条例及题库至 v3。
 6. `supabase/migrations/006_holiday_question.sql`：同步小长假设备断电题的答案和解析。
 7. `supabase/migrations/007_membership_approval.sql`：新增待审核身份及超级管理员注册审核。执行前须已有已核实的初始管理员账号，详见第 3 节。
+8. `supabase/migrations/008_equipment_hours.sql`：设备开放时间支持按分钟设置，保留完整半小时的预约时段要求。
 
 这些是首次安装迁移，001 和 003 不能反复整份执行。现有项目升级应新增迁移文件，不应重置生产数据库。
 

@@ -19,7 +19,7 @@ CloudBase 控制台 HTTP 网关 → 跨域设置中允许 `http://127.0.0.1:5173
 
 ## 数据库和注册云函数
 
-此环境已执行 `cloudbase/migrations/` 内六份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
+此环境已执行 `cloudbase/migrations/` 内七份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
 
 维护时使用官方 CloudBase CLI 3.8.1 或兼容版本，先 `tcb login` 完成本机授权；部署设置在 `cloudbaserc.json`。在项目根目录运行：
 
@@ -95,3 +95,5 @@ returning id, name, role, membership_status;
 修改条例后须同步核对 `src/data/questions.ts` 中的选项和解析，并通过新增迁移更新云端 `private.questions`；修改条例正文不会自动更新题库。已应用的迁移和已生成的考试快照不应重写。
 
 2026-09-14：迁移 `20260914000005_membership_approval.sql` 新增注册审核、独立超级管理员和待审核权限隔离。部署时先迁移数据库、再部署注册云函数，最后定向设置已核实的初始超级管理员；不修改任何现有密码。
+
+2026-09-14：迁移 `20260914000006_equipment_hours.sql` 允许设备开放时间精确到分钟（例如 `00:00—23:59`），预约仍按整点/半点划分，仅展示开放范围内完整的半小时。开放范围至少包含一个完整时段，不支持通过单个申请跨日；原有设备和预约记录保留。

@@ -106,6 +106,7 @@ beforeAll(async () => {
     );
   }
   await db.exec(readFileSync(migration, 'utf8'));
+  await db.exec(readFileSync('cloudbase/migrations/20260914000006_equipment_hours.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -169,6 +170,45 @@ it('超级管理员继承设备管理权限，可作为设备负责人', async (
     ])
   ).id;
   expect(asset).toMatch(/^[a-f0-9-]{36}$/);
+});
+it('设备保存支持截图中的 00:00—23:59，以及按分钟设置的开放范围', async () => {
+  await identity(owner, 'authenticated');
+  for (const [open_time, close_time] of [
+    ['00:00', '23:59'],
+    ['08:10', '17:45'],
+  ]) {
+    const saved = await rpc('public.save_equipment_result', [
+      {
+        name: '开放时间回归测试',
+        model: 'G1-edu+',
+        category: '人形机器人',
+        project: '公共设备',
+        room: '505',
+        location: '指定存放位置',
+        manager_id: owner,
+        status: 'available',
+        open_time,
+        close_time,
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        asset_code: randomUUID(),
+      },
+    ]);
+    const snapshot = await rpc('public.get_snapshot');
+    expect(snapshot.equipment.find((e: any) => e.id === saved.id)).toMatchObject({
+      open_time: `${open_time}:00`,
+      close_time: `${close_time}:00`,
+      manager_id: owner,
+    });
+    await expect(
+      rpc('public.save_equipment_result', [
+        {
+          ...snapshot.equipment.find((e: any) => e.id === saved.id),
+          open_time: '08:10',
+          close_time: '08:40',
+        },
+      ]),
+    ).rejects.toThrow(/equipment_booking_window_check/);
+  }
 });
 it('匿名、普通成员、管理员、待审核账号以及伪造 JWT 角色都不能审核', async () => {
   const app = await application(requestedAdmin.uid);

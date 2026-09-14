@@ -111,6 +111,14 @@ afterEach(() => {
 });
 
 describe('CloudBase DataService', () => {
+  it('设备字段约束错误显示可操作提示，不显示服务故障或数据库行内容', async () => {
+    const api = await loadService();
+    app.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: '23514', message: 'equipment_close_time_check', details: 'private row' },
+    });
+    await expect(api.saveEquipment({})).rejects.toThrow(/填写.*要求/);
+  });
   it('公开配置初始化且匿名不会读取个人资料', async () => {
     const api = await loadService();
     expect(api.mode).toBe('cloudbase');

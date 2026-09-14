@@ -13,7 +13,7 @@ import {
 import { MembershipReview } from '../components/MembershipReview';
 import { isAdministrator, isApproved, isSuperAdministrator, ROLE_LABELS } from '../lib/membership';
 import { useApp } from '../lib/store';
-import { DEFAULT_CATEGORIES, cnDate, accessState } from '../lib/domain';
+import { DEFAULT_CATEGORIES, cnDate, accessState, equipmentScheduleError } from '../lib/domain';
 import { Badge, Empty, Modal } from '../components/ui';
 import type { Equipment, Booking, Profile } from '../lib/types';
 export function Admin() {
@@ -75,6 +75,12 @@ export function Admin() {
     setError('');
     setBusy(true);
     try {
+      const scheduleError = equipmentScheduleError(
+        editing?.open_time,
+        editing?.close_time,
+        editing?.weekdays,
+      );
+      if (scheduleError) throw new Error(scheduleError);
       await api.saveEquipment(editing!);
       await refresh();
       setEditing(null);
@@ -437,7 +443,7 @@ export function Admin() {
                 <input
                   required
                   type="time"
-                  step="1800"
+                  step="60"
                   value={editing.open_time?.slice(0, 5)}
                   onChange={(e) => update('open_time', e.target.value)}
                 />
@@ -447,11 +453,14 @@ export function Admin() {
                 <input
                   required
                   type="time"
-                  step="1800"
+                  step="60"
                   value={editing.close_time?.slice(0, 5)}
                   onChange={(e) => update('close_time', e.target.value)}
                 />
               </label>
+              <p className="muted span-2">
+                开放时间可精确到分钟，例如 00:00—23:59；预约仅列出范围内完整的半小时时段。
+              </p>
               <div className="form-field span-2">
                 每周开放日
                 <div className="weekday-picker">
