@@ -8,6 +8,7 @@ import {
   slots,
   slotEnd,
   equipmentScheduleError,
+  bookingDateTime,
 } from '../src/lib/domain';
 const equipment = {
   status: 'available',
@@ -16,6 +17,40 @@ const equipment = {
   close_time: '22:00',
 };
 describe('预约边界', () => {
+  it('预约提交将 24:00 转为次日零点，包括月底和年底', () => {
+    expect(bookingDateTime('2099-01-31', '24:00')).toBe('2099-02-01T00:00:00+08:00');
+    expect(bookingDateTime('2099-12-31', '24:00')).toBe('2100-01-01T00:00:00+08:00');
+    expect(bookingDateTime('2099-01-05', '23:30')).toBe('2099-01-05T23:30:00+08:00');
+  });
+  it('全天开放包含 48 格，最后一格结束于次日零点', () => {
+    expect(equipmentScheduleError('00:00', '24:00', [1])).toBeNull();
+    expect(equipmentScheduleError('24:00', '24:00', [1])).toBeTruthy();
+    expect(equipmentScheduleError('00:00', '24:01', [1])).toBeTruthy();
+    expect(slots('00:00:00', '24:00:00')).toHaveLength(48);
+    expect(slots('23:30', '24:00')).toEqual(['23:30']);
+    expect(slotEnd('23:30')).toBe('24:00');
+  });
+  it('全天预约允许次日零点结束，按开始日检查开放日，仍拒绝跨到次日其他时刻', () => {
+    const allDay = { ...equipment, open_time: '00:00', close_time: '24:00', weekdays: [1] };
+    expect(validateBooking(allDay, '2099-01-05T23:30+08:00', '2099-01-06T00:00+08:00')).toBeNull();
+    expect(validateBooking(allDay, '2099-01-05T00:00+08:00', '2099-01-06T00:00+08:00')).toBeNull();
+    expect(
+      validateBooking(allDay, '2099-01-05T23:30+08:00', '2099-01-06T00:30+08:00'),
+    ).toBeTruthy();
+    expect(
+      validateBooking(allDay, '2099-01-05T23:30+08:00', '2099-01-07T00:00+08:00'),
+    ).toBeTruthy();
+    expect(
+      validateBooking(allDay, '2099-01-06T00:00+08:00', '2099-01-06T00:30+08:00'),
+    ).toBeTruthy();
+    expect(
+      validateBooking(
+        { ...allDay, close_time: '23:59' },
+        '2099-01-05T23:30+08:00',
+        '2099-01-06T00:00+08:00',
+      ),
+    ).toBeTruthy();
+  });
   it('23:59 和非半点开放时间只生成开放范围内完整的半小时时段', () => {
     expect(slots('23:00', '23:59')).toEqual(['23:00']);
     expect(slots('08:10:00', '10:15:00')).toEqual(['08:30', '09:00', '09:30']);

@@ -15,6 +15,8 @@ import {
   offsetDay,
   slots,
   slotEnd,
+  bookingDateTime,
+  equipmentHoursLabel,
   overlaps,
   validateBooking,
   accessState,
@@ -59,9 +61,9 @@ export function EquipmentDetail() {
     blocked = (t: string) => {
       const next = ends[allSlots.indexOf(t)];
       return (
-        !!validateBooking(e, `${day}T${t}:00+08:00`, `${day}T${next}:00+08:00`) ||
+        !!validateBooking(e, bookingDateTime(day, t), bookingDateTime(day, next)) ||
         occupied.some((b) =>
-          overlaps(`${day}T${t}+08:00`, `${day}T${next}+08:00`, b.starts_at, b.ends_at),
+          overlaps(bookingDateTime(day, t), bookingDateTime(day, next), b.starts_at, b.ends_at),
         )
       );
     };
@@ -72,8 +74,8 @@ export function EquipmentDetail() {
     try {
       await api.book({
         equipment_id: e!.id,
-        starts_at: `${day}T${start}:00+08:00`,
-        ends_at: `${day}T${end}:00+08:00`,
+        starts_at: bookingDateTime(day, start),
+        ends_at: bookingDateTime(day, end),
         purpose,
         parent_id: parent?.id,
       });
@@ -135,7 +137,7 @@ export function EquipmentDetail() {
                     开放时间
                   </dt>
                   <dd>
-                    {e.open_time.slice(0, 5)} — {e.close_time.slice(0, 5)}
+                    {equipmentHoursLabel(e.open_time, e.close_time)}
                     <small>
                       {e.weekdays
                         .map((d) => ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d])
@@ -208,7 +210,7 @@ export function EquipmentDetail() {
                 <div className="time-slots">
                   {allSlots.map((t, i) => (
                     <button
-                      title={`${t}–${ends[i]}`}
+                      title={`${t}–${ends[i] === '24:00' ? '次日 00:00' : ends[i]}`}
                       key={t}
                       disabled={blocked(t)}
                       className={selected(t) ? 'selected' : ''}
@@ -222,7 +224,8 @@ export function EquipmentDetail() {
                   ))}
                 </div>
                 <p className="muted calendar-help">
-                  点选起始时段，再在右侧调整结束时间。仅列出开放范围内完整的半小时；待审批申请也会暂占时段。
+                  点选起始时段，再在右侧调整结束时间。仅列出开放范围内完整的半小时；待审批申请也会暂占时段。结束时间可选至次日零点的设备，最后一格为
+                  23:30—次日 00:00。
                 </p>
               </>
             ) : (
@@ -272,8 +275,8 @@ export function EquipmentDetail() {
                     结束时间
                     <select value={end} onChange={(ev) => setEnd(ev.target.value)}>
                       {ends.map((t) => (
-                        <option key={t} disabled={t <= start}>
-                          {t}
+                        <option key={t} value={t} disabled={t <= start}>
+                          {t === '24:00' ? '次日 00:00' : t}
                         </option>
                       ))}
                     </select>
@@ -296,7 +299,8 @@ export function EquipmentDetail() {
                 <strong>
                   {Math.max(
                     0,
-                    (+new Date(`${day}T${end}+08:00`) - +new Date(`${day}T${start}+08:00`)) /
+                    (+new Date(bookingDateTime(day, end)) -
+                      +new Date(bookingDateTime(day, start))) /
                       3600000,
                   ) || 0}{' '}
                   <small>小时</small>

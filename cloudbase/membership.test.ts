@@ -107,6 +107,7 @@ beforeAll(async () => {
   }
   await db.exec(readFileSync(migration, 'utf8'));
   await db.exec(readFileSync('cloudbase/migrations/20260914000006_equipment_hours.sql', 'utf8'));
+  await db.exec(readFileSync('cloudbase/migrations/20260915000000_all_day_equipment.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -341,4 +342,68 @@ it('普通成员申请获批后只得到普通成员权限，越权修改角色�
   await expect(rpc('public.review_membership', [app.id, 'approve', ''])).rejects.toThrow(
     /超级管理员/,
   );
+});
+
+it('全天设备可预约至次日零点，审批和占用检查仍生效', async () => {
+  await identity(owner, 'authenticated');
+  const saved = await rpc('public.save_equipment_result', [
+    {
+      name: '全天设备',
+      model: '测试型号',
+      category: '工具',
+      project: '公共设备',
+      room: '505',
+      location: '指定位置',
+      manager_id: owner,
+      status: 'available',
+      open_time: '00:00',
+      close_time: '24:00',
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      asset_code: randomUUID(),
+    },
+  ]);
+  const e = (await rpc('public.get_snapshot')).equipment.find((e: any) => e.id === saved.id);
+  expect(e.close_time).toBe('24:00:00');
+  const input = {
+    equipment_id: saved.id,
+    starts_at: '2099-01-05T23:30+08:00',
+    ends_at: '2099-01-06T00:00+08:00',
+    purpose: '全天边界测试',
+  };
+  await identity(member, 'authenticated');
+  const booking = await rpc('public.create_booking_result', [input]);
+  await expect(rpc('public.create_booking_result', [input])).rejects.toThrow(/已有预约/);
+  for (const ends_at of ['2099-01-06T00:30+08:00', '2099-01-07T00:00+08:00'])
+    await expect(rpc('public.create_booking_result', [{ ...input, ends_at }])).rejects.toThrow(
+      /跨日/,
+    );
+  await identity(owner, 'authenticated');
+  await rpc('public.booking_action', [booking.id, 'approve', '']);
+  await identity(member, 'authenticated');
+  const next = await rpc('public.create_booking_result', [
+    {
+      ...input,
+      starts_at: '2099-01-06T00:00+08:00',
+      ends_at: '2099-01-06T00:30+08:00',
+      parent_id: booking.id,
+    },
+  ]);
+  expect(next.id).toBeTruthy();
+  await identity(owner, 'authenticated');
+  await rpc('public.save_equipment_result', [{ ...e, close_time: '23:59' }]);
+  await expect(
+    rpc('public.create_booking_result', [
+      { ...input, starts_at: '2099-01-07T23:30+08:00', ends_at: '2099-01-08T00:00+08:00' },
+    ]),
+  ).rejects.toThrow(/开放时段/);
+  await rpc('public.save_equipment_result', [{ ...e, weekdays: [1] }]);
+  await expect(
+    rpc('public.create_booking_result', [
+      { ...input, starts_at: '2099-01-06T12:00+08:00', ends_at: '2099-01-06T12:30+08:00' },
+    ]),
+  ).rejects.toThrow(/开放日/);
+  const fullDay = await rpc('public.create_booking_result', [
+    { ...input, starts_at: '2099-01-12T00:00+08:00', ends_at: '2099-01-13T00:00+08:00' },
+  ]);
+  expect(fullDay.id).toBeTruthy();
 });

@@ -59,10 +59,14 @@ export function validateBooking(
   if (!Number.isFinite(+s) || !Number.isFinite(+e) || e <= s) return '请选择有效的起止时间';
   if (eq.status !== 'available') return '该设备当前不可预约';
   if (s <= now) return '预约开始时间必须晚于当前时间';
-  if (dateKey(s) !== dateKey(e)) return '每次预约限同一天，跨日请分别申请';
+  const endsAtMidnight = +e === +new Date(bookingDateTime(dateKey(s), '24:00'));
+  if (dateKey(s) !== dateKey(e) && !endsAtMidnight) return '每次预约最晚到次日零点，跨日请分别申请';
   const day = new Date(dateKey(s) + 'T12:00:00+08:00').getUTCDay();
   if (!eq.weekdays.includes(day)) return '所选日期不在设备开放日内';
-  if (timeKey(s) < eq.open_time.slice(0, 5) || timeKey(e) > eq.close_time.slice(0, 5))
+  if (
+    timeKey(s) < eq.open_time.slice(0, 5) ||
+    (endsAtMidnight ? '24:00' : timeKey(e)) > eq.close_time.slice(0, 5)
+  )
     return '所选时间超出设备开放时段';
   if (
     +e - +s < 1800000 ||
@@ -119,7 +123,19 @@ export function gradeExam(correct: number[], answers: Record<number, number>) {
     passed: correct.length === 10 && Object.keys(answers).length === 10 && score === 100,
   };
 }
-function timeMinutes(value: string) {
+export function bookingDateTime(day: string, time: string) {
+  return time === '24:00' ? `${offsetDay(day, 1)}T00:00:00+08:00` : `${day}T${time}:00+08:00`;
+}
+export function isAllDay(open?: string, close?: string) {
+  return open?.slice(0, 5) === '00:00' && close?.slice(0, 5) === '24:00';
+}
+export function equipmentHoursLabel(open: string, close: string) {
+  return isAllDay(open, close)
+    ? '全天开放（24 小时）'
+    : `${open.slice(0, 5)} — ${close.slice(0, 5)}`;
+}
+function timeMinutes(value: string, allowDayEnd = false) {
+  if (allowDayEnd && /^24:00(?::00)?$/.test(value)) return 1440;
   if (!/^([01]\d|2[0-3]):[0-5]\d(?::00)?$/.test(value)) return NaN;
   return Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
 }
@@ -137,7 +153,7 @@ export function equipmentScheduleError(
   if (!weekdays?.length || weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6))
     return '请至少选择一个有效的每周开放日';
   const start = timeMinutes(open ?? ''),
-    end = timeMinutes(close ?? '');
+    end = timeMinutes(close ?? '', true);
   if (!Number.isFinite(start) || !Number.isFinite(end))
     return '请填写有效的每日开放时间和结束时间（精确到分钟）';
   if (end <= start) return '每日结束时间必须晚于开放时间';
@@ -148,7 +164,7 @@ export function equipmentScheduleError(
 export function slots(open: string, close: string) {
   const result: string[] = [];
   const first = Math.ceil(timeMinutes(open) / 30) * 30,
-    max = timeMinutes(close);
+    max = timeMinutes(close, true);
   for (let min = first; min + 30 <= max; min += 30) result.push(formatMinutes(min));
   return result;
 }

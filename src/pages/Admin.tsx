@@ -13,7 +13,14 @@ import {
 import { MembershipReview } from '../components/MembershipReview';
 import { isAdministrator, isApproved, isSuperAdministrator, ROLE_LABELS } from '../lib/membership';
 import { useApp } from '../lib/store';
-import { DEFAULT_CATEGORIES, cnDate, accessState, equipmentScheduleError } from '../lib/domain';
+import {
+  DEFAULT_CATEGORIES,
+  cnDate,
+  accessState,
+  equipmentScheduleError,
+  isAllDay,
+  equipmentHoursLabel,
+} from '../lib/domain';
 import { Badge, Empty, Modal } from '../components/ui';
 import type { Equipment, Booking, Profile } from '../lib/types';
 export function Admin() {
@@ -61,9 +68,9 @@ export function Admin() {
       location: '',
       manager_id: user!.id,
       status: 'available',
-      open_time: '08:00',
-      close_time: '22:00',
-      weekdays: [1, 2, 3, 4, 5],
+      open_time: '00:00',
+      close_time: '24:00',
+      weekdays: [1, 2, 3, 4, 5, 6, 0],
       description: '',
       precautions: '',
       image_url: '',
@@ -195,9 +202,7 @@ export function Admin() {
                       <td>
                         <Badge status={e.status} />
                       </td>
-                      <td>
-                        {e.open_time.slice(0, 5)} — {e.close_time.slice(0, 5)}
-                      </td>
+                      <td>{equipmentHoursLabel(e.open_time, e.close_time)}</td>
                       <td>
                         <button
                           className="text-button"
@@ -438,29 +443,51 @@ export function Admin() {
                   ))}
                 </select>
               </label>
-              <label className="form-field">
-                每日开放时间
-                <input
-                  required
-                  type="time"
-                  step="60"
-                  value={editing.open_time?.slice(0, 5)}
-                  onChange={(e) => update('open_time', e.target.value)}
-                />
+              <label className="form-field span-2">
+                每日开放时段
+                <select
+                  value={isAllDay(editing.open_time, editing.close_time) ? 'all-day' : 'custom'}
+                  onChange={(e) =>
+                    setEditing((current) => ({
+                      ...current,
+                      open_time: e.target.value === 'all-day' ? '00:00' : '08:00',
+                      close_time: e.target.value === 'all-day' ? '24:00' : '22:00',
+                    }))
+                  }
+                >
+                  <option value="all-day">全天开放（24 小时）</option>
+                  <option value="custom">自定义时段</option>
+                </select>
               </label>
-              <label className="form-field">
-                每日结束时间
-                <input
-                  required
-                  type="time"
-                  step="60"
-                  value={editing.close_time?.slice(0, 5)}
-                  onChange={(e) => update('close_time', e.target.value)}
-                />
-              </label>
-              <p className="muted span-2">
-                开放时间可精确到分钟，例如 00:00—23:59；预约仅列出范围内完整的半小时时段。
-              </p>
+              {isAllDay(editing.open_time, editing.close_time) ? (
+                <p className="muted span-2">所选开放日的 00:00 至次日 00:00 均可预约。</p>
+              ) : (
+                <>
+                  <label className="form-field">
+                    每日开放时间
+                    <input
+                      required
+                      type="time"
+                      step="60"
+                      value={editing.open_time?.slice(0, 5)}
+                      onChange={(e) => update('open_time', e.target.value)}
+                    />
+                  </label>
+                  <label className="form-field">
+                    每日结束时间
+                    <input
+                      required
+                      type="time"
+                      step="60"
+                      value={editing.close_time?.slice(0, 5)}
+                      onChange={(e) => update('close_time', e.target.value)}
+                    />
+                  </label>
+                  <p className="muted span-2">
+                    开放时间可精确到分钟；预约仅列出范围内完整的半小时时段。
+                  </p>
+                </>
+              )}
               <div className="form-field span-2">
                 每周开放日
                 <div className="weekday-picker">

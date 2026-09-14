@@ -148,8 +148,11 @@ export function Dashboard() {
                     <div>
                       <strong>{eq?.name ?? '设备'}</strong>
                       <small>
-                        {cnDate(b.starts_at)} — {cnDate(b.ends_at).split(' ')[1]} · {eq?.room}{' '}
-                        实验室
+                        {cnDate(b.starts_at)} —{' '}
+                        {dateKey(new Date(b.starts_at)) === dateKey(new Date(b.ends_at))
+                          ? cnDate(b.ends_at).split(' ')[1]
+                          : cnDate(b.ends_at)}{' '}
+                        · {eq?.room} 实验室
                       </small>
                     </div>
                     <Badge status={b.status} />

@@ -82,6 +82,7 @@ beforeAll(async () => {
   }
   await db.exec(readFileSync(migration, 'utf8'));
   await db.exec(readFileSync('supabase/migrations/008_equipment_hours.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/009_all_day_equipment.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -142,4 +143,33 @@ it('Supabase 普通管理员不能读取或审核他人注册申请，超级管�
 it('Supabase 拒绝非法申请身份和未满分凭证，不能通过伪造 metadata 绕过审核', async () => {
   await expect(register('super_admin')).rejects.toThrow(/身份/);
   await expect(register('user', 90)).rejects.toThrow(/考试/);
+});
+
+it('Supabase 全天设备可保存并预约最后半小时', async () => {
+  await identity(owner);
+  const id = await rpc('save_equipment', [
+    {
+      name: '全天测试',
+      model: '测试型号',
+      category: '工具',
+      project: '公共设备',
+      room: '505',
+      location: '指定位置',
+      manager_id: owner,
+      status: 'available',
+      open_time: '00:00',
+      close_time: '24:00',
+      weekdays: [1],
+      asset_code: randomUUID(),
+    },
+  ]);
+  const booking = await rpc('create_booking', [
+    {
+      equipment_id: id,
+      starts_at: '2099-01-05T23:30+08:00',
+      ends_at: '2099-01-06T00:00+08:00',
+      purpose: '全天预约',
+    },
+  ]);
+  expect(booking).toBeTruthy();
 });
