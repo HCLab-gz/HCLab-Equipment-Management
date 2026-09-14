@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "hclab-equipments-d0ehkkk05991a35",
+  "functionRoot": "cloudbase/functions",
+  "functions": [{
+    "name": "hclab-register",
+    "handler": "index.main",
+    "runtime": "Nodejs20.19",
+    "timeout": 30,
+    "memorySize": 256,
+    "installDependency": true,
+    "envVariables": { "HCLAB_ENV_ID": "hclab-equipments-d0ehkkk05991a35" }
+  }]
+}

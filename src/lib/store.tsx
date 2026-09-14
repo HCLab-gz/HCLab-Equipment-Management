@@ -19,6 +19,14 @@ interface Store {
   toast: (s: string) => void;
 }
 const Context = createContext<Store | null>(null);
+const emptySnapshot = (): Snapshot => ({
+  equipment: [],
+  bookings: [],
+  profiles: [],
+  notices: [],
+  violations: [],
+  busy: [],
+});
 export function useApp() {
   const context = useContext(Context);
   if (!context) throw new Error('应用初始化中');
@@ -27,42 +35,44 @@ export function useApp() {
 export function Provider({ children }: { children: ReactNode }) {
   const [api, setApi] = useState<DataService | null>(null),
     [user, setUser] = useState<Profile | null>(null),
-    [data, setData] = useState<Snapshot>({
-      equipment: [],
-      bookings: [],
-      profiles: [],
-      notices: [],
-      violations: [],
-      busy: [],
-    }),
+    [data, setData] = useState<Snapshot>(emptySnapshot),
     [error, setError] = useState(''),
     [message, setMessage] = useState('');
   const gate = useMemo(
     () =>
-      latestOnly<{ u: Profile | null; d: Snapshot }>(({ u, d }) => {
-        setUser(u);
-        setData(d);
-      }),
+      latestOnly<{ u: Profile | null; d: Snapshot }>(
+        ({ u, d }) => {
+          setUser(u);
+          setData(d);
+        },
+        () => {
+          setUser(null);
+          setData(emptySnapshot());
+        },
+      ),
     [],
   );
   const refresh = useCallback(async () => {
     if (!api) return;
-    await gate.run(async () => {
-      const u = await api.session(),
-        d = await api.snapshot();
+    await gate.run(async (publish) => {
+      const u = await api.session();
+      // Drop private state as soon as the identity is gone, even if the public read stalls.
+      if (!u) publish({ u: null, d: emptySnapshot() });
+      const d = await api.snapshot();
       return { u, d };
     });
   }, [api, gate]);
   const clearSession = useCallback(() => {
     gate.invalidate();
     setUser(null);
-    setData({ equipment: [], bookings: [], profiles: [], notices: [], violations: [], busy: [] });
+    setData(emptySnapshot());
   }, [gate]);
   useEffect(() => {
     loadService()
       .then(setApi)
       .catch((e) => setError(e.message));
   }, []);
+  useEffect(() => api?.onSessionInvalidated?.(clearSession), [api, clearSession]);
   useEffect(() => {
     refresh().catch((e) => setError(e.message));
   }, [refresh]);

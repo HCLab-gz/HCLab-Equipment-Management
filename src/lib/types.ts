@@ -112,11 +112,12 @@ export interface BookingInput {
   parent_id?: string | null;
 }
 export interface DataService {
-  mode: 'demo' | 'supabase';
+  mode: 'demo' | 'supabase' | 'cloudbase';
   session(): Promise<Profile | null>;
   login(email: string, password: string): Promise<Profile>;
   demoLogin?(role: Role): Promise<Profile>;
   logout(): Promise<void>;
+  onSessionInvalidated?(callback: () => void): () => void;
   snapshot(): Promise<Snapshot>;
   startExam(email: string): Promise<Exam>;
   submitExam(id: string, answers: Record<number, number>): Promise<ExamResult>;

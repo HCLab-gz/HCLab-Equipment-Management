@@ -1,6 +1,6 @@
 # HCLab 仪器管理平台
 
-为课题组 504 / 505 实验室设计的中文设备管理网站。前端部署在 **GitHub Pages**，正式账号与数据由 **Supabase** 承载。
+为课题组 504 / 505 实验室设计的中文设备管理网站。前端适配 **GitHub Pages**，正式账号与数据已接入 **腾讯云 CloudBase 上海地域**。网站目前仅本地预览，尚未公开。
 
 ## 已实现
 
@@ -31,13 +31,13 @@ npm run preview
 
 ## 正式部署
 
-详细步骤见 [部署说明](docs/DEPLOYMENT.md)。需要一个你控制的 Supabase 项目。生产模式没有默认管理员密码，也没有演示切换入口。
+当前环境配置和维护见 [CloudBase 接入说明](docs/CLOUDBASE.md)。生产模式没有默认管理员密码，也没有演示切换入口。原 [Supabase 部署说明](docs/DEPLOYMENT.md) 保留为备选方案。
 
 当前**网站已取消公开发布，源码仓库保持公开**：[GitHub 仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) · [提交 issue](https://github.com/HCLab-gz/HCLab-Equipment-Management/issues)。本地可使用 `npm run dev` 继续评审。
 
 推送 `main` 只测试和构建，不会发布网站。未来确认需要公开时，由维护者手动运行 Actions 并明确勾选 `publish`。如需再次下线，由仓库管理员在 Settings → Pages 中取消发布，操作说明见部署文档。
 
-默认运行演示模式，登录页可体验普通用户和管理员流程。正式账号和多人共享预约需要先按部署说明连接 Supabase，不能将当前浏览器中的演示记录用于实际预约。
+未配置后端的新安装默认运行演示模式；本机已配置 CloudBase，注册、满分考试、预约及管理操作保存到云端。原浏览器演示记录不会导入正式库。
 
 ## 使用约定
 
@@ -57,6 +57,6 @@ npm run preview
 
 ## 代码结构
 
-`src/pages/` 页面，`src/lib/` 数据适配与业务规则，`src/data/` 条例与演示内容，`supabase/migrations/` 数据库/题库/图片存储迁移，`tests/` 业务与数据库权限测试。
+`src/pages/` 页面，`src/lib/` 数据适配与业务规则，`src/data/` 条例与演示内容，`cloudbase/migrations/` 正式数据库迁移，`cloudbase/functions/` 注册云函数，`supabase/migrations/` 备选后端迁移，`tests/` 与 `cloudbase/database.test.ts` 为业务、配置及权限测试。
 
-数据库测试使用 PGlite 运行真实 PostgreSQL SQL（包括 RLS、触发器和 RPC），模拟 Supabase 的身份函数。未连接云端前，不代表已完成 Supabase Auth 邮件、Storage 上传和公网并发端到端验证。
+数据库测试使用 PGlite 运行真实 PostgreSQL SQL（包括 RLS 与 RPC），分别模拟 CloudBase 和 Supabase 的身份结构。CloudBase 注册、登录、考试、并发预约、审批及通知已在真实环境验证；详见 [实施记录](docs/cloudbase-integration-plan.md)。

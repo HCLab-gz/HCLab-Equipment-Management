@@ -1,0 +1,8 @@
+{
+  "name": "hclab-register",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": { "test": "node --test test/*.test.cjs" },
+  "dependencies": { "@cloudbase/manager-node": "5.8.6" }
+}

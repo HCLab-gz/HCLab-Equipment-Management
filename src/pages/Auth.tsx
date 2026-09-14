@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, CheckCircle2, BookOpen, ArrowLeft } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { CLOUDBASE_PASSWORD_HINT, registrationPasswordError } from '../lib/registration';
 import { rules, sourceNote, RULES_VERSION } from '../data/rules';
 import type { Exam, ExamResult } from '../lib/types';
 export function Login() {
@@ -172,7 +173,7 @@ export function RulesPage() {
   );
 }
 export function Register() {
-  const { api, refresh } = useApp(),
+  const { api, refresh, clearSession } = useApp(),
     navigate = useNavigate(),
     [step, setStep] = useState(0),
     [info, setInfo] = useState({ name: '', email: '', student_id: '', project: '', password: '' }),
@@ -187,6 +188,8 @@ export function Register() {
     setBusy(true);
     setError('');
     try {
+      const passwordError = registrationPasswordError(info.password, api.mode);
+      if (passwordError) throw new Error(passwordError);
       setExam(await api.startExam(info.email));
       setAnswers({});
       setResult(null);
@@ -207,6 +210,7 @@ export function Register() {
         setResult(r);
       }
       if (r.passed) {
+        clearSession();
         const registration = await api.register({ ...info, token: r.token! });
         setConfirmation(registration.needsConfirmation);
         await refresh();
@@ -247,6 +251,9 @@ export function Register() {
             className="form-stack"
             onSubmit={(e) => {
               e.preventDefault();
+              const passwordError = registrationPasswordError(info.password, api.mode);
+              setError(passwordError ?? '');
+              if (passwordError) return;
               setStep(1);
             }}
           >
@@ -275,13 +282,21 @@ export function Register() {
                 <input
                   required
                   minLength={10}
-                  maxLength={128}
+                  maxLength={api.mode === 'cloudbase' ? 32 : 128}
                   type="password"
                   autoComplete="new-password"
-                  placeholder="至少 10 位，请勿使用其他网站的密码"
+                  placeholder={
+                    api.mode === 'cloudbase'
+                      ? '10–32 位，至少包含三类字符'
+                      : '至少 10 位，请勿使用其他网站的密码'
+                  }
+                  aria-describedby={api.mode === 'cloudbase' ? 'password-hint' : undefined}
                   value={info.password}
                   onChange={(e) => setInfo({ ...info, password: e.target.value })}
                 />
+                {api.mode === 'cloudbase' && (
+                  <small id="password-hint">{CLOUDBASE_PASSWORD_HINT}</small>
+                )}
               </label>
             </div>
             <div className="form-actions">
@@ -341,7 +356,9 @@ export function Register() {
                 </h3>
                 <p>
                   {result.passed
-                    ? '已获得准入合格凭证，正在完成账号注册。'
+                    ? busy
+                      ? '已获得准入合格凭证，正在完成账号注册。'
+                      : '考试已通过，注册流程尚未完成。请按下方提示重试；若凭证已过期，可重新考试获取新凭证，已填资料会保留。'
                     : '请复习以下内容，再重新抽题作答。'}
                 </p>
                 {result.review?.map((r) => (
@@ -375,6 +392,11 @@ export function Register() {
               </fieldset>
             ))}
             <div className="form-actions">
+              {result?.passed && (
+                <button disabled={busy} className="button secondary" onClick={start}>
+                  重新考试获取新凭证
+                </button>
+              )}
               {result && !result.passed ? (
                 <button disabled={busy} className="button" onClick={start}>
                   重新抽题考试

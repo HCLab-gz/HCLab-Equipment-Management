@@ -30,6 +30,9 @@ jobs:
           VITE_DATA_MODE: ${{ vars.VITE_DATA_MODE || 'demo' }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_CLOUDBASE_ENV_ID: ${{ vars.VITE_CLOUDBASE_ENV_ID }}
+          VITE_CLOUDBASE_REGION: ${{ vars.VITE_CLOUDBASE_REGION || 'ap-shanghai' }}
+          VITE_CLOUDBASE_PUBLISHABLE_KEY: ${{ vars.VITE_CLOUDBASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.publish
         with:
