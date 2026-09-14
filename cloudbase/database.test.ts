@@ -547,3 +547,37 @@ it('object-returning wrappers retain authenticated and administrator permission 
   await identity(student, 'authenticated');
   await expect(call('public.save_equipment_result', [{}])).rejects.toThrow(/管理员/);
 });
+
+it('rules v3 preserves admitted members and makes new registrations acknowledge the extracted rules', async () => {
+  const old = await examResult('pre-v3@test.edu');
+  const before = (await db.query('select id,rules_version from public.profiles order by id')).rows;
+  await db.exec(readFileSync('cloudbase/migrations/20260914000003_rules_update.sql', 'utf8'));
+  expect((await db.query('select id,rules_version from public.profiles order by id')).rows).toEqual(
+    before,
+  );
+  const legacy = await call('private.claim_registration', [
+    registration('pre-v3@test.edu', old.token),
+  ]);
+  await nativeAccount(legacy.uid, legacy.username);
+  await call('private.finish_registration', [old.token]);
+  expect(
+    (await db.query('select rules_version from public.profiles where id=$1', [legacy.uid])).rows[0],
+  ).toEqual({ rules_version: '2026-09-v2' });
+  const email = 'rules-v3@test.edu';
+  const passed = await examResult(email);
+  expect(
+    (await db.query('select rules_version from private.exam_attempts where id=$1', [passed.examId]))
+      .rows[0],
+  ).toEqual({ rules_version: '2026-09-v3' });
+  const reserved = await call('private.claim_registration', [registration(email, passed.token)]);
+  await nativeAccount(reserved.uid, reserved.username);
+  await call('private.finish_registration', [passed.token]);
+  expect(
+    (await db.query('select role,rules_version from public.profiles where id=$1', [reserved.uid]))
+      .rows[0],
+  ).toEqual({ role: 'user', rules_version: '2026-09-v3' });
+  await identity();
+  await expect(
+    call('private.claim_registration', [registration(email, passed.token)]),
+  ).rejects.toThrow(/permission denied/);
+});

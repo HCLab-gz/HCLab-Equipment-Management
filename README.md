@@ -51,7 +51,7 @@ npm run preview
 
 ## 条例来源与待核对内容
 
-界面结构参考 [HKUST(GZ) 仪器展示页面](https://instrumentsharelab.hkust-gz.edu.cn/Equipment/ShowList?XPath=000)。条例依据用户提供的补充条款整理；[原腾讯文档](https://docs.qq.com/doc/DWG12Z0hhcmd5ZGFP) 仅成功读取目录，未把未读到的设备细则当作已核实内容。G1、Oli、Tron1、Franka、Lift2 的专用操作步骤需设备管理员补充。正式启用前，请课题组确认条例文本及损失责任处理依据。
+界面结构参考 [HKUST(GZ) 仪器展示页面](https://instrumentsharelab.hkust-gz.edu.cn/Equipment/ShowList?XPath=000)。条例已从[原腾讯文档](https://docs.qq.com/doc/DWG12Z0hhcmd5ZGFP) 提取全文，并合并课题组补充要求。注册页和条例页直接展示 6 个通用章节与 G1、Oli、Tron1、Franka、Lift2 的 5 个设备章节，支持目录定位、折叠与展开；[提取原文存档](docs/lab-rules-source.md) 保留对照。原文的纸质登记要求已调整为平台预约与归还流程。正式启用前，请课题组确认条例文本及损失责任处理依据。
 
 演示设备、型号、项目、位置、账号和预约为示例，不是已经核实的实验室资产清单。生产数据库迁移**不导入示例资产**，由管理员录入真实设备。
 

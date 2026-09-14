@@ -19,7 +19,7 @@ CloudBase 控制台 HTTP 网关 → 跨域设置中允许 `http://127.0.0.1:5173
 
 ## 数据库和注册云函数
 
-此环境已执行 `cloudbase/migrations/` 内三份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
+此环境已执行 `cloudbase/migrations/` 内四份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
 
 维护时使用官方 CloudBase CLI 3.8.1 或兼容版本，先 `tcb login` 完成本机授权；部署设置在 `cloudbaserc.json`。在项目根目录运行：
 
@@ -80,3 +80,5 @@ returning id, name, email, role;
 目前推送 main 只测试和构建，`publish` 默认 false。不得因后端接入而自动恢复发布。未来经课题组确认公开后，仓库管理员配置同名 Actions Variables，再手动运行工作流并勾选 publish。
 
 验证命令为 `npm test` 和 `npm run build`。数据库测试运行真实 PostgreSQL SQL，并模拟本环境的原生身份结构；真实环境联调另见实施记录。
+
+2026-09-14：条例全文提取后升为 `2026-09-v3`。迁移 `20260914000003_rules_update.sql` 使新考试采用新版本；已有考试和凭证保持原有效期，新成员资料记录其实际考试版本。既有成员的准入记录保持不变，无须重新注册。

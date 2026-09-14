@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, CheckCircle2, BookOpen, ArrowLeft } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { CLOUDBASE_PASSWORD_HINT, registrationPasswordError } from '../lib/registration';
-import { rules, sourceNote, RULES_VERSION } from '../data/rules';
+import { RulesReader } from '../components/RulesReader';
 import type { Exam, ExamResult } from '../lib/types';
 export function Login() {
   const { api, refresh, clearSession, toast } = useApp(),
@@ -121,35 +121,6 @@ export function Login() {
     </section>
   );
 }
-export function RulesContent() {
-  return (
-    <div className="rules-document">
-      <div className="info-box">
-        版本 {RULES_VERSION} · {sourceNote}
-      </div>
-      <a
-        className="source-link"
-        href="https://docs.qq.com/doc/DWG12Z0hhcmd5ZGFP"
-        target="_blank"
-        rel="noreferrer"
-      >
-        查看课题组原始管理条例 ↗
-      </a>
-      {rules.map((r, i) => (
-        <section key={r.title}>
-          <h2>
-            {String(i + 1).padStart(2, '0')} / {r.title}
-          </h2>
-          <ol>
-            {r.items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ol>
-        </section>
-      ))}
-    </div>
-  );
-}
 export function RulesPage() {
   return (
     <>
@@ -167,7 +138,7 @@ export function RulesPage() {
         </Link>
       </div>
       <section className="panel">
-        <RulesContent />
+        <RulesReader />
       </section>
     </>
   );
@@ -315,9 +286,7 @@ export function Register() {
                 请完整阅读管理条例
               </h2>
             </div>
-            <div className="rules-scroll">
-              <RulesContent />
-            </div>
+            <RulesReader />
             <label className="check-label rule-agree">
               <input
                 type="checkbox"

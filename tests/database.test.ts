@@ -217,3 +217,57 @@ it('续约衔接同一使用者的原预约，保留交接记录而不虚构物�
     'returned',
   );
 });
+
+it('条例 v3 不改写已注册成员的记录，新考试采用新版本', async () => {
+  await identity(null, 'anon');
+  const old = await rpc('start_exam', ['before-v3@test.edu']);
+  await identity(null, 'postgres');
+  const before = (await db.query('select id,rules_version from public.profiles order by id')).rows;
+  await db.exec(readFileSync('supabase/migrations/005_rules_v3.sql', 'utf8'));
+  expect((await db.query('select id,rules_version from public.profiles order by id')).rows).toEqual(
+    before,
+  );
+  expect(
+    (
+      await db.query('select expires_at<=now() as expired from private.exam_attempts where id=$1', [
+        old.id,
+      ])
+    ).rows[0],
+  ).toEqual({ expired: false });
+  await identity(null, 'anon');
+  const current = await rpc('start_exam', ['after-v3@test.edu']);
+  await identity(null, 'postgres');
+  expect(
+    (await db.query('select rules_version from private.exam_attempts where id=$1', [current.id]))
+      .rows[0],
+  ).toEqual({ rules_version: '2026-09-v3' });
+  for (const [exam, email, version] of [
+    [old, 'before-v3@test.edu', '2026-09-v2'],
+    [current, 'after-v3@test.edu', '2026-09-v3'],
+  ] as const) {
+    const attempt = (
+      await db.query<{ questions: { id: number; answer: number }[] }>(
+        'select questions from private.exam_attempts where id=$1',
+        [exam.id],
+      )
+    ).rows[0];
+    const answers = Object.fromEntries(attempt.questions.map((q) => [q.id, q.answer]));
+    const result = await rpc('submit_exam', [exam.id, answers]);
+    await db.query(
+      'insert into auth.users(id,email,raw_user_meta_data) values(gen_random_uuid(),$1,$2)',
+      [
+        email,
+        {
+          exam_token: result.token,
+          name: '版本测试',
+          student_id: 'VERSION',
+          accepted_rules_version: 'forged',
+        },
+      ],
+    );
+    expect(
+      (await db.query('select role,rules_version from public.profiles where email=$1', [email]))
+        .rows[0],
+    ).toEqual({ role: 'user', rules_version: version });
+  }
+});
