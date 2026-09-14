@@ -51,7 +51,7 @@ export function Dashboard() {
             好研究，一起做。
           </h2>
           <p>
-            查看 504 / 505 实验室设备，选择时间，
+            查看实验室设备，选择时间，
             <br className="desktop-break" />
             让下一次实验从容开始。
           </p>

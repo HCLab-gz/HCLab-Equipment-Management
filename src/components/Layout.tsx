@@ -112,7 +112,7 @@ export function Layout() {
         <Outlet />
       </main>
       <footer>
-        <span>HCLab · 504 / 505 实验室</span>
+        <span>Humanoid Computing Lab</span>
         <span>
           <Link to="/rules">实验室管理条例</Link>
           <span className="footer-dot">·</span>
