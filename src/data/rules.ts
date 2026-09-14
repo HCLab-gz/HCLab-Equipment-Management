@@ -61,7 +61,6 @@ export const rules = [
     ],
   },
 ];
-export const sourceUrl = 'https://docs.qq.com/doc/DWG12Z0hhcmd5ZGFP';
 export const sourceNote =
   '依据课题组《实验室管理注意事项》全文及补充管理要求整理。原文的纸质使用登记已统一调整为本平台预约、开始使用与归还登记。';
 export const sourceUpdated = '2026-09-13';

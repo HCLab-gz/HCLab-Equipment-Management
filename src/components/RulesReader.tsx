@@ -1,12 +1,11 @@
 import { useRef, useState } from 'react';
-import { ChevronDown, List, ShieldCheck, TriangleAlert, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, List, ShieldCheck, TriangleAlert } from 'lucide-react';
 import {
   equipmentChapters,
   ruleChapters,
   RULES_VERSION,
   rulesUpdated,
   sourceNote,
-  sourceUrl,
 } from '../data/rules';
 
 const chapters = [...ruleChapters, ...equipmentChapters];
@@ -92,9 +91,6 @@ export function RulesReader() {
               ))}
             </div>
           ))}
-          <a className="rules-original" href={sourceUrl} target="_blank" rel="noreferrer">
-            核对课题组原文 <ArrowUpRight size={14} />
-          </a>
         </nav>
         <div className="rules-chapters">
           <div className="rules-reader-toolbar">

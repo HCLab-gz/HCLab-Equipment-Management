@@ -2913,16 +2913,6 @@ th {
 .rules-directory-group button:hover {
   background: #f1f5ed;
 }
-.rules-original {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 8px 12px;
-  color: #65785a;
-  font-size: 11px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
 .rules-reader-toolbar {
   display: flex;
   align-items: center;
@@ -3145,9 +3135,6 @@ th {
     padding: 8px 10px;
     background: #f6f8f2;
     border-color: #e5ebde;
-  }
-  .rules-original {
-    margin: 3px 0;
   }
   .rules-reader-toolbar {
     font-size: 12px;
