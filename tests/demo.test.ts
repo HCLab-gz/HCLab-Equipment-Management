@@ -88,3 +88,35 @@ it('未登录看不到个人记录，连续违规后阻止预约', async () => {
     }),
   ).rejects.toThrow();
 });
+it('演示模式管理员申请需超级管理员审核，普通管理员不能审核', async () => {
+  const api = createDemoService(memory());
+  const email = 'review-admin@example.test';
+  const exam = await api.startExam(email);
+  const result = await api.submitExam(
+    exam.id,
+    Object.fromEntries(
+      exam.questions.map((q) => [q.id, questions.find((x) => x.id === q.id)!.answer]),
+    ),
+  );
+  const registered = await api.register({
+    email,
+    password: 'DemoOnly-Review-2026',
+    name: '申请管理员',
+    student_id: 'DEMO-REVIEW',
+    project: '演示',
+    token: result.token!,
+    requested_role: 'admin',
+  });
+  expect(registered.needsApproval).toBe(true);
+  expect((await api.session())?.membership_status).toBe('pending');
+  await expect(api.saveEquipment({})).rejects.toThrow(/审核/);
+  const app = (await api.snapshot()).applications[0];
+  await api.demoLogin!('admin');
+  expect((await api.snapshot()).applications).toEqual([]);
+  await expect(api.reviewMembership(app.id, 'approve')).rejects.toThrow(/超级管理员/);
+  await api.demoLogin!('super_admin');
+  expect((await api.snapshot()).applications).toHaveLength(1);
+  await api.reviewMembership(app.id, 'approve');
+  await api.login(email, 'DemoOnly-Review-2026');
+  expect(await api.session()).toMatchObject({ role: 'admin', membership_status: 'approved' });
+});

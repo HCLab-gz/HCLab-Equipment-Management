@@ -14,6 +14,7 @@ const profile: Profile = {
   student_id: '123',
   project: 'robotics',
   role: 'user',
+  membership_status: 'approved',
   banned: false,
   suspended_until: null,
   violations_count: 0,
@@ -302,5 +303,22 @@ describe('CloudBase DataService', () => {
       { contentType: 'image/png', upsert: false },
     );
     expect(url).toMatch(/^https:\/\/images.example\/[a-f0-9-]+\.png$/);
+  });
+});
+it('超级管理员可登录；待审核申请保留查询会话并提示审核', async () => {
+  const api = await loadService();
+  profiles = [{ ...profile, role: 'super_admin', membership_status: 'approved' }];
+  expect((await api.login(profile.email, 'CorrectHorse123!')).role).toBe('super_admin');
+  profiles = [{ ...profile, membership_status: 'pending' }];
+  expect(await api.register({ ...registration, requested_role: 'admin' })).toMatchObject({
+    needsConfirmation: false,
+    needsApproval: true,
+  });
+  expect(await api.session()).toMatchObject({ membership_status: 'pending' });
+  await api.reviewMembership('request-123', 'reject', '无法核实身份');
+  expect(app.rpc).toHaveBeenLastCalledWith('review_membership', {
+    p_id: 'request-123',
+    p_action: 'reject',
+    p_note: '无法核实身份',
   });
 });

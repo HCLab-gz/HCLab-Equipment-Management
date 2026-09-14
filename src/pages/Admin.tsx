@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Settings2,
@@ -10,19 +10,31 @@ import {
   Box,
   Upload,
 } from 'lucide-react';
+import { MembershipReview } from '../components/MembershipReview';
+import { isAdministrator, isApproved, isSuperAdministrator, ROLE_LABELS } from '../lib/membership';
 import { useApp } from '../lib/store';
 import { DEFAULT_CATEGORIES, cnDate, accessState } from '../lib/domain';
 import { Badge, Empty, Modal } from '../components/ui';
 import type { Equipment, Booking, Profile } from '../lib/types';
 export function Admin() {
   const { api, user, data, refresh, toast } = useApp(),
-    [tab, setTab] = useState('equipment'),
+    [params, setParams] = useSearchParams(),
     [editing, setEditing] = useState<Partial<Equipment> | null>(null),
     [review, setReview] = useState<{ b: Booking; action: 'approve' | 'reject' } | null>(null),
     [violation, setViolation] = useState<Profile | null>(null),
     [note, setNote] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+  const requestedTab = params.get('tab') ?? 'equipment';
+  const tab = [
+    'equipment',
+    'approvals',
+    'users',
+    ...(isSuperAdministrator(user) ? ['registration'] : []),
+  ].includes(requestedTab)
+    ? requestedTab
+    : 'equipment';
+  const setTab = (value: string) => setParams({ tab: value });
   if (!user)
     return (
       <Empty title="请使用管理员账号登录">
@@ -31,7 +43,7 @@ export function Admin() {
         </Link>
       </Empty>
     );
-  if (user.role !== 'admin')
+  if (!isAdministrator(user))
     return (
       <Empty title="仅管理员可访问管理后台">
         当前账号为普通用户。<Link to="/">返回工作台</Link>
@@ -115,6 +127,7 @@ export function Admin() {
           ['equipment', '设备管理', Box],
           ['approvals', '预约审批', ClipboardCheck],
           ['users', '成员与准入', Users],
+          ...(isSuperAdministrator(user) ? [['registration', '注册审核', ShieldCheck]] : []),
         ].map(([key, label, Icon]) => {
           const I = Icon as typeof Box;
           return (
@@ -126,10 +139,14 @@ export function Admin() {
               <I size={17} />
               {String(label)}
               {key === 'approvals' && pending.length > 0 && <span>{pending.length}</span>}
+              {key === 'registration' && data.applications.some((a) => a.status === 'pending') && (
+                <span>{data.applications.filter((a) => a.status === 'pending').length}</span>
+              )}
             </button>
           );
         })}
       </div>
+      {tab === 'registration' && <MembershipReview />}
       {tab === 'equipment' && (
         <section className="panel">
           <div className="section-heading">
@@ -276,13 +293,13 @@ export function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {data.profiles.map((p) => (
+                {data.profiles.filter(isApproved).map((p) => (
                   <tr key={p.id}>
                     <td>
                       <strong className="table-title">{p.name}</strong>
                       <small>{p.email}</small>
                       <small>
-                        {p.student_id} · {p.role === 'admin' ? '管理员' : '普通用户'}
+                        {p.student_id} · {ROLE_LABELS[p.role]}
                       </small>
                     </td>
                     <td>{p.project}</td>
@@ -408,13 +425,11 @@ export function Admin() {
                   value={editing.manager_id}
                   onChange={(e) => update('manager_id', e.target.value)}
                 >
-                  {data.profiles
-                    .filter((p) => p.role === 'admin')
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
+                  {data.profiles.filter(isAdministrator).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="form-field">

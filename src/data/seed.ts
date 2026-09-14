@@ -7,6 +7,7 @@ export const admin: Profile = {
   student_id: '',
   project: '公共设备',
   role: 'admin',
+  membership_status: 'approved',
   banned: false,
   suspended_until: null,
   violations_count: 0,
@@ -19,6 +20,13 @@ export const student: Profile = {
   student_id: '演示账号',
   project: '具身智能',
   role: 'user',
+};
+export const superAdministrator: Profile = {
+  ...admin,
+  id: 'demo-super_admin',
+  name: '超级管理员（演示）',
+  email: 'super-admin@hclab.demo',
+  role: 'super_admin',
 };
 export function seed(): Snapshot {
   const rows: [string, string, string, string, '504' | '505', string, string][] = [
@@ -114,7 +122,7 @@ export function seed(): Snapshot {
   const tomorrow = offsetDay(dateKey(), 1);
   return {
     equipment,
-    profiles: [admin, student],
+    profiles: [superAdministrator, admin, student],
     bookings: [
       {
         id: 'demo-booking',
@@ -144,5 +152,6 @@ export function seed(): Snapshot {
     ],
     violations: [],
     busy: [],
+    applications: [],
   };
 }

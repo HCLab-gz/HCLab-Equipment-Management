@@ -14,12 +14,14 @@ function normalize(input) {
   const token = string('token', 36);
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(token)) throw new InputError('考试凭证无效，请重新考试');
   const password = input.password;
+  const requested_role = input.requested_role === undefined ? 'user' : input.requested_role;
+  if (!['user', 'admin'].includes(requested_role)) throw new InputError('申请身份只能选择普通成员或管理员');
   if (typeof password !== 'string' || password.length < 10 || password.length > 32 || !/^[A-Za-z0-9]/.test(password)
     || [/[a-z]/, /[A-Z]/, /[0-9]/, /[()!@#$%^&*|?><_-]/].filter(re => re.test(password)).length < 3)
     throw new InputError('密码须以字母或数字开头，10–32位，并包含大写、小写、数字、特殊符号中至少三类');
   return {
     password,
-    data: { email, token, name: string('name', 80), student_id: string('student_id', 80), project: string('project', 120),
+    data: { email, token, requested_role, name: string('name', 80), student_id: string('student_id', 80), project: string('project', 120),
       username: `hclab_${createHash('sha256').update(email).digest('hex').slice(0, 40)}` },
   };
 }
@@ -37,7 +39,7 @@ function publicError(error) {
   if (error instanceof InputError) return error.message;
   // PostgreSQL business errors are explicitly raised in Chinese. Provider diagnostics stay private.
   const msg = error?.message || '';
-  const match = msg.match(/(请先[^\n;]{0,120}|本[^\n;]{0,100}凭证[^\n;]{0,100}|考试凭证[^\n;]{0,120}|该邮箱[^\n;]{0,120}|注册资料[^\n;]{0,120}|请完整填写[^\n;]{0,100})/);
+  const match = msg.match(/(请先[^\n;]{0,120}|本[^\n;]{0,100}凭证[^\n;]{0,100}|考试凭证[^\n;]{0,120}|该邮箱[^\n;]{0,120}|注册资料[^\n;]{0,120}|请完整填写[^\n;]{0,100}|尚未配置可用的超级管理员[^\n;]{0,100})/);
   return match?.[1]?.replace(/\s*\(SQLSTATE [^)]*\)/g, '') || '注册暂未完成，请重试；如已创建账号，请尝试登录。';
 }
 function createRegistrationHandler(adapter) {

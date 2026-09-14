@@ -1,4 +1,6 @@
-export type Role = 'user' | 'admin';
+export type Role = 'user' | 'admin' | 'super_admin';
+export type RequestedRole = 'user' | 'admin';
+export type MembershipStatus = 'pending' | 'approved' | 'rejected';
 export type EquipmentStatus = 'available' | 'maintenance' | 'offline';
 export type BookingStatus =
   'pending' | 'approved' | 'in_use' | 'returned' | 'renewed' | 'rejected' | 'cancelled';
@@ -9,6 +11,7 @@ export interface Profile {
   student_id: string;
   project: string;
   role: Role;
+  membership_status: MembershipStatus;
   banned: boolean;
   suspended_until: string | null;
   violations_count: number;
@@ -76,6 +79,23 @@ export interface Snapshot {
   notices: Notice[];
   violations: Violation[];
   busy: BusySlot[];
+  applications: MembershipApplication[];
+}
+export interface MembershipApplication {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  student_id: string;
+  project: string;
+  requested_role: RequestedRole;
+  status: MembershipStatus;
+  score: number;
+  rules_version: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewer_name: string | null;
+  review_note: string;
 }
 export interface Question {
   id: number;
@@ -103,6 +123,7 @@ export interface Registration {
   student_id: string;
   project: string;
   token: string;
+  requested_role?: RequestedRole;
 }
 export interface BookingInput {
   equipment_id: string;
@@ -121,7 +142,8 @@ export interface DataService {
   snapshot(): Promise<Snapshot>;
   startExam(email: string): Promise<Exam>;
   submitExam(id: string, answers: Record<number, number>): Promise<ExamResult>;
-  register(input: Registration): Promise<{ needsConfirmation: boolean }>;
+  register(input: Registration): Promise<{ needsConfirmation: boolean; needsApproval?: boolean }>;
+  reviewMembership(id: string, action: 'approve' | 'reject', note?: string): Promise<void>;
   saveEquipment(input: Partial<Equipment>): Promise<void>;
   uploadImage(file: File): Promise<string>;
   book(input: BookingInput): Promise<void>;

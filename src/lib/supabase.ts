@@ -57,11 +57,15 @@ export function createSupabaseService(): DataService {
             student_id: input.student_id,
             project: input.project,
             exam_token: input.token,
+            requested_role: input.requested_role ?? 'user',
           },
         },
       });
       if (error) throw new Error(error.message);
-      return { needsConfirmation: !data.session };
+      return { needsConfirmation: !data.session, needsApproval: true };
+    },
+    async reviewMembership(id, action, note = '') {
+      await rpc('review_membership', { p_id: id, p_action: action, p_note: note });
     },
     async saveEquipment(input) {
       await rpc('save_equipment', { p_data: input });

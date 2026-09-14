@@ -8,6 +8,7 @@ import { Catalog } from './pages/Catalog';
 import { Login, Register, RulesPage } from './pages/Auth';
 import { EquipmentDetail } from './pages/EquipmentDetail';
 import { Records } from './pages/Records';
+import { Membership } from './pages/Membership';
 import { Admin } from './pages/Admin';
 import './styles.css';
 function App() {
@@ -24,6 +25,7 @@ function App() {
             <Route path="rules" element={<RulesPage />} />
             <Route path="records" element={<Records />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="membership" element={<Membership />} />
             <Route
               path="*"
               element={

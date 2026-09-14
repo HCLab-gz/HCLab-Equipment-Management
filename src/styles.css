@@ -3187,3 +3187,163 @@ th {
     break-inside: avoid;
   }
 }
+
+/* Membership applications and the super-administrator review workspace. */
+.membership-status {
+  max-width: 790px;
+  margin: 24px auto;
+  padding: 38px;
+}
+.membership-status h1 {
+  font-size: 27px;
+  line-height: 1.5;
+  margin: 9px 0 16px;
+}
+.membership-status > .muted {
+  line-height: 1.9;
+}
+.membership-status-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  color: #52763f;
+  background: #eef4e7;
+  margin-bottom: 22px;
+}
+.membership-status-icon.rejected {
+  color: #9b6642;
+  background: #fbf1e8;
+}
+.membership-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 28px;
+  margin: 25px 0;
+  padding: 22px 0;
+  border-top: 1px solid #e6ebdf;
+  border-bottom: 1px solid #e6ebdf;
+}
+.membership-details dt {
+  color: #7d8b70;
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+.membership-details dd {
+  margin: 0;
+  color: #405536;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.membership-review-note {
+  padding: 17px 20px;
+  border-left: 3px solid #99b080;
+  background: #f2f6ed;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.membership-review-note.rejected {
+  border-color: #c89a76;
+  background: #fbf4ec;
+}
+.membership-review-note p {
+  white-space: pre-wrap;
+  margin: 7px 0 0;
+  overflow-wrap: anywhere;
+}
+.membership-status-hint {
+  font-size: 12px;
+  margin-top: 22px;
+}
+.membership-applications {
+  display: grid;
+  gap: 18px;
+}
+.membership-application {
+  padding: 23px;
+  border: 1px solid #dfe7d7;
+  border-radius: 12px;
+}
+.membership-application-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+.membership-application-heading h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 17px;
+  margin: 0 0 9px;
+}
+.membership-application-heading p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.membership-badge {
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: #f5f0df;
+  color: #8b773d;
+  font-size: 12px;
+  padding: 5px 11px;
+}
+.membership-badge.approved {
+  background: #edf4e6;
+  color: #52743d;
+}
+.membership-badge.rejected {
+  background: #f9eee6;
+  color: #9a6844;
+}
+.membership-review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.registration .steps {
+  gap: 22px;
+}
+.registration .steps i {
+  width: 42px;
+  margin-left: 14px;
+}
+.demo-login > div {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .membership-status {
+    padding: 24px 20px;
+    margin: 8px auto;
+  }
+  .membership-status h1 {
+    font-size: 23px;
+  }
+  .membership-details {
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+  .membership-application {
+    padding: 18px;
+  }
+  .membership-application-heading {
+    gap: 12px;
+  }
+  .registration .steps {
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .registration .steps > div {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .registration .steps i {
+    display: none;
+  }
+}

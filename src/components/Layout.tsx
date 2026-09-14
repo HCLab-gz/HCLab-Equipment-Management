@@ -9,15 +9,17 @@ import {
   ShieldCheck,
   FlaskConical,
 } from 'lucide-react';
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApp } from '../lib/store';
+import { accountLabel, isApproved, isSuperAdministrator } from '../lib/membership';
 import { cnDate } from '../lib/domain';
 import { Modal, Empty } from './ui';
 export function Layout() {
   const { user, api, data, refresh, clearSession, toast } = useApp(),
     [notices, setNotices] = useState(false),
-    navigate = useNavigate();
+    navigate = useNavigate(),
+    location = useLocation();
   const unread = data.notices.filter((n) => !n.read).length;
   return (
     <>
@@ -52,7 +54,7 @@ export function Layout() {
             <>
               <button
                 className="notification-button icon-button"
-                aria-label={`预约通知，${unread} 条未读`}
+                aria-label={`站内通知，${unread} 条未读`}
                 onClick={() => setNotices(true)}
               >
                 <Bell size={20} />
@@ -62,7 +64,7 @@ export function Layout() {
                 <span className="avatar">{user.name.slice(0, 1)}</span>
                 <span>
                   {user.name}
-                  <small>{user.role === 'admin' ? '管理员' : '课题组成员'}</small>
+                  <small>{accountLabel(user)}</small>
                 </span>
               </div>
               <button
@@ -109,7 +111,11 @@ export function Layout() {
         </div>
       )}
       <main className="page-shell">
-        <Outlet />
+        {user && !isApproved(user) && !['/membership', '/rules'].includes(location.pathname) ? (
+          <Navigate to="/membership" replace />
+        ) : (
+          <Outlet />
+        )}
       </main>
       <footer>
         <span>Humanoid Computing Lab</span>
@@ -124,9 +130,18 @@ export function Layout() {
         <span>共享有序 · 安全先行</span>
       </footer>
       {notices && (
-        <Modal title="预约通知" onClose={() => setNotices(false)}>
+        <Modal title="站内通知" onClose={() => setNotices(false)}>
           <div className="row-between">
             <p className="muted">{unread} 条未读通知</p>
+            {data.notices.some((n) => n.title.includes('注册')) && (
+              <Link
+                className="text-button"
+                to={isSuperAdministrator(user) ? '/admin?tab=registration' : '/membership'}
+                onClick={() => setNotices(false)}
+              >
+                {isSuperAdministrator(user) ? '查看注册申请' : '查看审核结果'}
+              </Link>
+            )}
             <button
               className="text-button"
               onClick={async () => {

@@ -110,7 +110,8 @@ export function createCloudBaseService(): DataService {
       }
       const snapshot = await rpc<Snapshot>('get_snapshot');
       const user = snapshot.profiles.find(
-        (item) => item.id === session.user.id && ['user', 'admin'].includes(item.role),
+        (item) =>
+          item.id === session.user.id && ['user', 'admin', 'super_admin'].includes(item.role),
       );
       if (!user) throw new SessionInvalidError('账号注册资料不完整，请完成准入注册或联系管理员');
       return user;
@@ -172,8 +173,14 @@ export function createCloudBaseService(): DataService {
             : '注册服务暂时不可用，请稍后重试';
         throw new Error(message);
       }
-      await login(input.email, input.password);
-      return { needsConfirmation: false };
+      const user = await login(input.email, input.password);
+      return {
+        needsConfirmation: false,
+        ...(user.membership_status !== 'approved' ? { needsApproval: true } : {}),
+      };
+    },
+    async reviewMembership(id, action, note = '') {
+      await rpc('review_membership', { p_id: id, p_action: action, p_note: note });
     },
     async saveEquipment(input) {
       await rpc('save_equipment_result', { p_data: input });

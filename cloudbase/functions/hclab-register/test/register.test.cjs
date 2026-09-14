@@ -58,3 +58,20 @@ test('backend exceptions never disclose private provider details', async () => {
   const {run} = setup({claim: async()=>{throw new Error('secretId=secret-value');}});
   assert.equal(JSON.stringify(await run(input)).includes('secret-value'), false);
 });
+test('requested identity is only user or admin and never an actual native privilege', async () => {
+  for (const requested_role of ['user','admin']) {
+    const {run,calls}=setup();
+    assert.equal((await run({...input,requested_role,role:'super_admin'})).ok,true);
+    assert.equal(calls[0][1].requested_role,requested_role);
+    assert.equal(calls[1][1].role,undefined);
+    assert.equal(calls[1][1].requested_role,undefined);
+  }
+  for (const requested_role of ['super_admin','owner','',false,{}]) {
+    const {run,calls}=setup();
+    assert.equal((await run({...input,requested_role})).ok,false);
+    assert.equal(calls.length,0);
+  }
+  const {run,calls}=setup();
+  await run(input);
+  assert.equal(calls[0][1].requested_role,'user');
+});

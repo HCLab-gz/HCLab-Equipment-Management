@@ -26,6 +26,7 @@ const emptySnapshot = (): Snapshot => ({
   notices: [],
   violations: [],
   busy: [],
+  applications: [],
 });
 export function useApp() {
   const context = useContext(Context);

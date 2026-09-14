@@ -4,7 +4,8 @@ import { ShieldCheck, ArrowRight, CheckCircle2, BookOpen, ArrowLeft } from 'luci
 import { useApp } from '../lib/store';
 import { CLOUDBASE_PASSWORD_HINT, registrationPasswordError } from '../lib/registration';
 import { RulesReader } from '../components/RulesReader';
-import type { Exam, ExamResult } from '../lib/types';
+import { isApproved, isAdministrator, ROLE_LABELS } from '../lib/membership';
+import type { RequestedRole, Exam, ExamResult } from '../lib/types';
 export function Login() {
   const { api, refresh, clearSession, toast } = useApp(),
     navigate = useNavigate(),
@@ -21,12 +22,12 @@ export function Login() {
     try {
       clearSession();
       const p = await api.login(email, password);
-      if (admin && p.role !== 'admin') {
+      if (admin && isApproved(p) && !isAdministrator(p)) {
         await api.logout();
         throw new Error('此入口仅供管理员使用，请通过用户登录入口登录');
       }
       await refresh();
-      navigate(admin ? '/admin' : '/');
+      navigate(!isApproved(p) ? '/membership' : admin ? '/admin' : '/');
       toast('登录成功');
     } catch (e) {
       setError((e as Error).message);
@@ -43,7 +44,7 @@ export function Login() {
       <h1>{admin ? '管理后台登录' : '登录 HCLab'}</h1>
       <p>
         {admin
-          ? '使用已分配管理员权限的账号登录。管理员权限由课题组负责人在数据服务中设置。'
+          ? '使用已经超级管理员审核通过的管理员账号登录；待审核账号登录后可查看申请进度。'
           : '登录后查看可预约时间，提交申请并跟进设备使用记录。'}
       </p>
       <form className="form-stack" onSubmit={submit}>
@@ -94,7 +95,7 @@ export function Login() {
         <div className="demo-login">
           <p>演示体验（不连接真实实验室数据）</p>
           <div>
-            {(['user', 'admin'] as const).map((role) => (
+            {(['user', 'admin', 'super_admin'] as const).map((role) => (
               <button
                 disabled={busy}
                 key={role}
@@ -104,7 +105,7 @@ export function Login() {
                     clearSession();
                     await api.demoLogin!(role);
                     await refresh();
-                    navigate(role === 'admin' ? '/admin' : '/');
+                    navigate(role !== 'user' ? '/admin' : '/');
                   } catch (e) {
                     setError((e as Error).message);
                   } finally {
@@ -112,7 +113,7 @@ export function Login() {
                   }
                 }}
               >
-                {role === 'user' ? '体验普通用户' : '体验管理员'}
+                体验{ROLE_LABELS[role]}
               </button>
             ))}
           </div>
@@ -147,14 +148,22 @@ export function Register() {
   const { api, refresh, clearSession } = useApp(),
     navigate = useNavigate(),
     [step, setStep] = useState(0),
-    [info, setInfo] = useState({ name: '', email: '', student_id: '', project: '', password: '' }),
+    [info, setInfo] = useState({
+      name: '',
+      email: '',
+      student_id: '',
+      project: '',
+      password: '',
+      requested_role: 'user' as RequestedRole,
+    }),
     [accepted, setAccepted] = useState(false),
     [exam, setExam] = useState<Exam | null>(null),
     [answers, setAnswers] = useState<Record<number, number>>({}),
     [result, setResult] = useState<ExamResult | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [confirmation, setConfirmation] = useState(false);
+    [confirmation, setConfirmation] = useState(false),
+    [approval, setApproval] = useState(false);
   async function start() {
     setBusy(true);
     setError('');
@@ -184,6 +193,7 @@ export function Register() {
         clearSession();
         const registration = await api.register({ ...info, token: r.token! });
         setConfirmation(registration.needsConfirmation);
+        setApproval(!!registration.needsApproval);
         await refresh();
         setStep(3);
       }
@@ -201,18 +211,18 @@ export function Register() {
           <h1>
             加入 HCLab<span className="heading-dot">.</span>
           </h1>
-          <p>阅读管理条例，通过简单考试，成为负责任的设备使用者。</p>
+          <p>选择申请身份，阅读条例并通过满分考试，再由超级管理员核实成员身份。</p>
         </div>
         <Link className="muted" to="/login">
           已有账号？登录
         </Link>
       </div>
       <div className="steps">
-        {['填写信息', '阅读条例', '准入考试'].map((s, i) => (
+        {['填写信息', '阅读条例', '准入考试', '身份审核'].map((s, i) => (
           <div key={s} className={step >= i ? 'active' : ''}>
             <span>{step > i ? <CheckCircle2 size={18} /> : String(i + 1).padStart(2, '0')}</span>
             {s}
-            {i < 2 && <i />}
+            {i < 3 && <i />}
           </div>
         ))}
       </div>
@@ -228,8 +238,10 @@ export function Register() {
               setStep(1);
             }}
           >
-            <h2>创建你的用户账号</h2>
-            <p className="muted">此入口仅注册普通用户；所有设备申请均须管理员审批。</p>
+            <h2>填写注册申请</h2>
+            <p className="muted">
+              普通成员和管理员申请均须通过 100 分考试，并经超级管理员审核同意后方可开通。
+            </p>
             <div className="form-grid">
               {[
                 ['name', '姓名', 'text'],
@@ -248,6 +260,19 @@ export function Register() {
                   />
                 </label>
               ))}
+              <label className="form-field span-2">
+                申请身份
+                <select
+                  value={info.requested_role}
+                  onChange={(e) =>
+                    setInfo({ ...info, requested_role: e.target.value as RequestedRole })
+                  }
+                >
+                  <option value="user">普通成员</option>
+                  <option value="admin">管理员</option>
+                </select>
+                <small>所选身份仅作为申请，实际权限由超级管理员审核确认。</small>
+              </label>
               <label className="form-field span-2">
                 密码
                 <input
@@ -326,8 +351,8 @@ export function Register() {
                 <p>
                   {result.passed
                     ? busy
-                      ? '已获得准入合格凭证，正在完成账号注册。'
-                      : '考试已通过，注册流程尚未完成。请按下方提示重试；若凭证已过期，可重新考试获取新凭证，已填资料会保留。'
+                      ? '已获得满分考试凭证，正在提交注册申请。'
+                      : '考试已通过，注册申请尚未提交成功。请按下方提示重试；若凭证已过期，可重新考试获取新凭证，已填资料会保留。'
                     : '请复习以下内容，再重新抽题作答。'}
                 </p>
                 {result.review?.map((r) => (
@@ -376,11 +401,7 @@ export function Register() {
                   className="button"
                   onClick={submit}
                 >
-                  {busy
-                    ? '正在验证并注册…'
-                    : result?.passed
-                      ? '重试完成注册'
-                      : '提交答案并完成注册'}
+                  {busy ? '正在提交申请…' : result?.passed ? '重试提交申请' : '提交答案并申请注册'}
                 </button>
               )}
             </div>
@@ -389,17 +410,27 @@ export function Register() {
         {step === 3 && (
           <div className="registration-success">
             <CheckCircle2 size={54} />
-            <h2>{confirmation ? '考试已通过，请验证邮箱' : '注册成功，欢迎加入 HCLab'}</h2>
+            <h2>
+              {confirmation
+                ? '申请已提交，请验证邮箱'
+                : approval
+                  ? '注册申请已提交，等待审核'
+                  : '注册已完成，欢迎加入 HCLab'}
+            </h2>
             <p>
               {confirmation
-                ? '账号注册已提交。请在邮箱中打开验证链接后登录；未验证前不能预约。'
-                : '你的准入考试已通过。预约获批后，请在批准时间内使用设备。'}
+                ? '请在邮箱中打开验证链接后登录查看审核状态；还须超级管理员审核通过后才能使用设备功能。'
+                : approval
+                  ? '满分考试已通过，正在等待超级管理员核实实验室成员身份。审核通过前不能预约或管理设备。'
+                  : '成员身份已核实，预约获批后请在批准时段内使用设备。'}
             </p>
             <button
               className="button"
-              onClick={() => navigate(confirmation ? '/login' : '/equipment')}
+              onClick={() =>
+                navigate(confirmation ? '/login' : approval ? '/membership' : '/equipment')
+              }
             >
-              {confirmation ? '前往登录' : '浏览可预约设备'}
+              {confirmation ? '前往登录' : approval ? '查看审核进度' : '浏览可预约设备'}
               <ArrowRight size={16} />
             </button>
           </div>

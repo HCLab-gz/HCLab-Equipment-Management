@@ -1,3 +1,4 @@
+import { isAdministrator } from '../lib/membership';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Search, ArrowUpRight } from 'lucide-react';
@@ -70,7 +71,7 @@ export function Records() {
             记录查询<span className="heading-dot">.</span>
           </h1>
           <p>
-            {user.role === 'admin'
+            {isAdministrator(user)
               ? '查看全组预约及领用、归还记录。'
               : '查看你的预约进度，登记开始使用与归还，或申请续约。'}
           </p>

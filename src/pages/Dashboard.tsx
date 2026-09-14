@@ -1,3 +1,4 @@
+import { isAdministrator } from '../lib/membership';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -93,7 +94,7 @@ export function Dashboard() {
           [ShieldCheck, '可预约设备', available, '台', '按开放时间提交申请'],
           [
             CalendarClock,
-            user?.role === 'admin' ? '待处理申请' : '我的待审批',
+            isAdministrator(user) ? '待处理申请' : '我的待审批',
             pending,
             '项',
             '批准后方可开始使用',

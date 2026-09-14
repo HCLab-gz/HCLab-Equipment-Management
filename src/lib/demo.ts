@@ -1,5 +1,7 @@
-import { seed } from '../data/seed';
+import { seed, superAdministrator } from '../data/seed';
 import { questions } from '../data/questions';
+import { RULES_VERSION } from '../data/rules';
+import { isApproved, isAdministrator, isSuperAdministrator, ROLE_LABELS } from './membership';
 import { ACTIVE_STATUSES, accessState, nextPenalty, overlaps, validateBooking } from './domain';
 import type { DataService, Snapshot, Equipment, Profile, AnswerQuestion } from './types';
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -33,7 +35,14 @@ export function createDemoService(storage: StorageLike): DataService {
     const saved = storage.getItem(KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const db = JSON.parse(saved) as Database;
+        db.applications ??= [];
+        db.profiles.forEach((p) => {
+          p.membership_status ??= 'approved';
+        });
+        if (!db.profiles.some((p) => p.id === superAdministrator.id))
+          db.profiles.unshift({ ...superAdministrator });
+        return db;
       } catch {
         throw new Error('演示数据无法读取，请清除此网站的演示存储后重试');
       }
@@ -55,7 +64,8 @@ export function createDemoService(storage: StorageLike): DataService {
   function requireUser(db: Database, admin = false): Profile {
     const p = current(db);
     if (!p) throw new Error('请先登录');
-    if (admin && p.role !== 'admin') throw new Error('仅管理员可以执行此操作');
+    if (!isApproved(p)) throw new Error('注册申请尚未通过审核');
+    if (admin && !isAdministrator(p)) throw new Error('仅管理员可以执行此操作');
     return p;
   }
   function notify(db: Database, id: string, title: string, body: string) {
@@ -74,9 +84,7 @@ export function createDemoService(storage: StorageLike): DataService {
       return current();
     },
     async demoLogin(role) {
-      const p = read().profiles.find(
-        (x) => x.id === `demo-${role === 'admin' ? 'admin' : 'user'}`,
-      )!;
+      const p = read().profiles.find((x) => x.id === `demo-${role}`)!;
       storage.setItem(SESSION, p.id);
       return p;
     },
@@ -95,14 +103,19 @@ export function createDemoService(storage: StorageLike): DataService {
     async snapshot() {
       const db = read(),
         p = current(db),
-        admin = p?.role === 'admin';
+        admin = isAdministrator(p),
+        approved = isApproved(p),
+        superAdmin = isSuperAdministrator(p);
       return {
         equipment: db.equipment,
-        bookings: db.bookings.filter((b) => p && (admin || b.user_id === p.id)),
-        profiles: db.profiles.filter((u) => p && (admin || u.id === p.id || u.role === 'admin')),
+        bookings: db.bookings.filter((b) => approved && (admin || b.user_id === p!.id)),
+        profiles: db.profiles.filter(
+          (u) => p && (u.id === p.id || superAdmin || (admin && isApproved(u))),
+        ),
+        applications: db.applications.filter((a) => p && (superAdmin || a.user_id === p.id)),
         notices: db.notices.filter((n) => n.user_id === p?.id),
-        violations: db.violations.filter((v) => p && (admin || v.user_id === p.id)),
-        busy: p
+        violations: db.violations.filter((v) => approved && (admin || v.user_id === p!.id)),
+        busy: approved
           ? db.bookings
               .filter((b) => ACTIVE_STATUSES.includes(b.status))
               .map(({ equipment_id, starts_at, ends_at, status }) => ({
@@ -160,6 +173,9 @@ export function createDemoService(storage: StorageLike): DataService {
     },
     async register(input) {
       const email = input.email.trim().toLowerCase();
+      const requested = input.requested_role ?? 'user';
+      if (!['user', 'admin'].includes(requested))
+        throw new Error('申请身份只能选择普通成员或管理员');
       if (proofs.get(input.token) !== email) throw new Error('请先阅读条例并通过准入考试');
       if (input.password.length < 10 || !input.name.trim() || !input.student_id.trim())
         throw new Error('请填写姓名、学号及至少 10 位密码');
@@ -175,15 +191,74 @@ export function createDemoService(storage: StorageLike): DataService {
         student_id: input.student_id.trim(),
         project: input.project.trim(),
         role: 'user',
+        membership_status: 'pending',
         banned: false,
         suspended_until: null,
         violations_count: 0,
       });
-      notify(db, id, '准入考试通过', '欢迎加入 HCLab，预约申请获批后方可使用设备。');
+      db.applications.unshift({
+        id: crypto.randomUUID(),
+        user_id: id,
+        name: input.name.trim(),
+        email,
+        student_id: input.student_id.trim(),
+        project: input.project.trim(),
+        requested_role: requested,
+        status: 'pending',
+        score: 100,
+        rules_version: RULES_VERSION,
+        created_at: new Date().toISOString(),
+        reviewed_at: null,
+        reviewer_name: null,
+        review_note: '',
+      });
+      notify(db, id, '注册申请已提交', '满分考试已通过，正在等待超级管理员审核。');
+      notify(
+        db,
+        superAdministrator.id,
+        '新的注册申请',
+        `${input.name.trim()} 申请成为${ROLE_LABELS[requested]}，请前往注册审核核实身份。`,
+      );
       save(db);
       proofs.delete(input.token);
       storage.setItem(SESSION, id);
-      return { needsConfirmation: false };
+      return { needsConfirmation: false, needsApproval: true };
+    },
+    async reviewMembership(id, action, note = '') {
+      const db = read(),
+        actor = requireUser(db);
+      if (!isSuperAdministrator(actor)) throw new Error('仅超级管理员可以审核注册申请');
+      if (!['approve', 'reject'].includes(action)) throw new Error('请选择同意或拒绝');
+      if (note.length > 1000 || (action === 'reject' && note.trim().length < 2))
+        throw new Error('请填写有效的拒绝原因或审核说明');
+      const app = db.applications.find((a) => a.id === id),
+        target = app && db.profiles.find((p) => p.id === app.user_id);
+      if (!app || !target) throw new Error('注册申请不存在');
+      if (target.id === actor.id || target.role === 'super_admin')
+        throw new Error('不能审核自己的身份或修改超级管理员');
+      const status = action === 'approve' ? 'approved' : 'rejected';
+      if (app.status !== 'pending') {
+        if (app.status === status) return;
+        throw new Error('该申请已审核，请刷新后查看结果');
+      }
+      if (app.score !== 100) throw new Error('须通过满分考试才可审核');
+      target.membership_status = status;
+      target.role = action === 'approve' ? app.requested_role : 'user';
+      Object.assign(app, {
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewer_name: actor.name,
+        review_note: note.trim(),
+      });
+      notify(
+        db,
+        target.id,
+        action === 'approve' ? '注册申请已通过' : '注册申请未通过',
+        action === 'approve'
+          ? `成员身份已核实，你已获准以${ROLE_LABELS[target.role]}身份使用平台。`
+          : `原因：${note.trim()}。如需复核，请联系超级管理员。`,
+      );
+      save(db);
     },
     async saveEquipment(input) {
       const db = read();
@@ -197,7 +272,7 @@ export function createDemoService(storage: StorageLike): DataService {
         !['504', '505'].includes(input.room ?? '')
       )
         throw new Error('请完整填写设备必填信息');
-      if (!db.profiles.some((p) => p.id === input.manager_id && p.role === 'admin'))
+      if (!db.profiles.some((p) => p.id === input.manager_id && isAdministrator(p)))
         throw new Error('请选择有效的负责管理员');
       if (
         !input.weekdays?.length ||
@@ -362,7 +437,8 @@ export function createDemoService(storage: StorageLike): DataService {
     },
     async markRead() {
       const db = read(),
-        p = requireUser(db);
+        p = current(db);
+      if (!p) throw new Error('请先登录');
       db.notices
         .filter((n) => n.user_id === p.id)
         .forEach((n) => {
