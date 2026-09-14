@@ -63,11 +63,11 @@ returning id, name, role, membership_status;
 
 ## 4. 创建仓库并部署
 
-当前要求为**暂不公开网站，源码仓库仍公开**。[源码仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) 已存在，日常推送 `main` 只会测试和构建，不会上传或发布 Pages 产物，无需重复初始化。
+网站已获准公开，当前实际部署使用 CloudBase 配置。[源码仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) 已存在，日常推送 `main` 只会测试和构建，不会上传或发布 Pages 产物，无需重复初始化。
 
 取消既有发布：使用仓库管理员账号 HCLab-gz 打开 Settings → Pages，在站点地址旁的菜单中选择 **Unpublish site**。这会移除当前网站部署，保留源代码和仓库设置。仅修改工作流不会自动移除已有网站，必须完成此操作。参见 [GitHub 取消发布说明](https://docs.github.com/en/pages/getting-started-with-github-pages/unpublishing-a-github-pages-site)。
 
-未来重新上线时，站点地址仍为 `https://hclab-gz.github.io/HCLab-Equipment-Management/`。
+站点地址为 `https://hclab-gz.github.io/HCLab-Equipment-Management/`。
 
 以下命令仅供在全新仓库首次部署时参考；当前仓库请跳过：
 
@@ -89,7 +89,7 @@ GitHub 仓库 → Settings → Secrets and variables → Actions → **Variables
 | `VITE_SUPABASE_URL`      | 项目 URL                    |
 | `VITE_SUPABASE_ANON_KEY` | publishable / anon 公开密钥 |
 
-未来确认需要公开后，GitHub → Settings → Pages → Source 选择 **GitHub Actions**。进入 Actions，手动运行 “Test and build (manual Pages publish)” 并明确勾选 **publish**。流程依次测试、构建并发布；只有全部通过才部署。普通推送及未勾选 publish 的手动运行均不会发布网站。
+GitHub → Settings → Pages → Source 选择 **GitHub Actions**。进入 Actions，手动运行 “Test and build (manual Pages publish)” 并明确勾选 **publish**。流程依次测试、构建并发布；只有全部通过才部署。普通推送及未勾选 publish 的手动运行均不会发布网站。
 
 没有设置变量时部署的是带醒目标识的演示版，供界面评审使用。不要把演示版当作多人预约系统。
 

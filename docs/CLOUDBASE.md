@@ -1,6 +1,6 @@
 # 腾讯云 CloudBase（上海）接入与维护
 
-当前平台使用 CloudBase 原生身份认证、PostgreSQL、云函数和图片存储。前端仍是可部署到 GitHub Pages 的静态网站；目前只在本地预览，Pages 已取消发布。
+当前平台使用 CloudBase 原生身份认证、PostgreSQL、云函数和图片存储。前端为部署到 GitHub Pages 的静态网站：[正式入口](https://hclab-gz.github.io/HCLab-Equipment-Management/)。
 
 ## 本地配置
 
@@ -15,7 +15,7 @@ VITE_CLOUDBASE_PUBLISHABLE_KEY=控制台提供的PublishableKey
 
 然后运行 `npm ci`、`npm run dev`。前端只能使用 Publishable Key；不能放入腾讯云 SecretId / SecretKey、数据库密码或服务管理员 Key。构建脚本校验公开 Key 的角色、环境与地域。
 
-CloudBase 控制台 HTTP 网关 → 跨域设置中允许 `http://127.0.0.1:5173` 和需要使用的其他前端来源。未来公开 GitHub Pages 时使用来源 `https://hclab-gz.github.io`（不带仓库路径）。增加来源不会自动发布网站。
+CloudBase 控制台 HTTP 网关 → 跨域设置中允许 `http://127.0.0.1:5173` 和需要使用的其他前端来源。GitHub Pages 使用来源 `https://hclab-gz.github.io`（不带仓库路径）；该来源的预检及匿名设备读取已验证通过。增加来源不会自动发布网站。
 
 ## 数据库和注册云函数
 
@@ -82,7 +82,9 @@ returning id, name, role, membership_status;
 
 ## GitHub 配置与发布状态
 
-目前推送 main 只测试和构建，`publish` 默认 false。不得因后端接入而自动恢复发布。未来经课题组确认公开后，仓库管理员配置同名 Actions Variables，再手动运行工作流并勾选 publish。
+2026-09-14 经课题组确认公开。仓库已配置 `VITE_DATA_MODE=cloudbase`、上海环境 ID、地域和 Publishable Key 四项 Actions Variables。前端只使用公开 Key，不含管理员凭据。
+
+推送 main 仍只测试和构建，`publish` 默认 false。发布更新时手动运行工作流并勾选 publish；没有部署成功的提交不会自动替换线上版本。
 
 验证命令为 `npm test` 和 `npm run build`。数据库测试运行真实 PostgreSQL SQL，并模拟本环境的原生身份结构；真实环境联调另见实施记录。
 

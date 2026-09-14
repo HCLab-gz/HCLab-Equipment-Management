@@ -1,6 +1,8 @@
 # HCLab 仪器管理平台
 
-为课题组 504 / 505 实验室设计的中文设备管理网站。前端适配 **GitHub Pages**，正式账号与数据已接入 **腾讯云 CloudBase 上海地域**。网站目前仅本地预览，尚未公开。
+为课题组 504 / 505 实验室设计的中文设备管理网站。前端部署到 **GitHub Pages**，正式账号与数据已接入 **腾讯云 CloudBase 上海地域**。
+
+网站：[HCLab 仪器管理平台](https://hclab-gz.github.io/HCLab-Equipment-Management/)。普通成员和管理员均须通过满分考试及超级管理员审核后，才能使用设备功能。
 
 ## 已实现
 
@@ -33,9 +35,9 @@ npm run preview
 
 当前环境配置和维护见 [CloudBase 接入说明](docs/CLOUDBASE.md)。生产模式没有默认管理员密码，也没有演示切换入口。原 [Supabase 部署说明](docs/DEPLOYMENT.md) 保留为备选方案。
 
-当前**网站已取消公开发布，源码仓库保持公开**：[GitHub 仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) · [提交 issue](https://github.com/HCLab-gz/HCLab-Equipment-Management/issues)。本地可使用 `npm run dev` 继续评审。
+网站及源码仓库公开：[GitHub 仓库](https://github.com/HCLab-gz/HCLab-Equipment-Management) · [提交 issue](https://github.com/HCLab-gz/HCLab-Equipment-Management/issues)。本地可使用 `npm run dev` 继续评审。
 
-推送 `main` 只测试和构建，不会发布网站。未来确认需要公开时，由维护者手动运行 Actions 并明确勾选 `publish`。如需再次下线，由仓库管理员在 Settings → Pages 中取消发布，操作说明见部署文档。
+推送 `main` 只测试和构建，不会自动更新线上网站。发布更新时，由维护者手动运行 Actions 并明确勾选 `publish`。如需再次下线，由仓库管理员在 Settings → Pages 中取消发布，操作说明见部署文档。
 
 未配置后端的新安装默认运行演示模式；本机已配置 CloudBase，注册、满分考试、预约及管理操作保存到云端。原浏览器演示记录不会导入正式库。
 
