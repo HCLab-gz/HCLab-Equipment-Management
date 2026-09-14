@@ -142,7 +142,7 @@ export function createDemoService(storage: StorageLike): DataService {
         throw new Error('请完成全部 10 道题');
       exam.used = true;
       const score = exam.questions.filter((q) => answers[q.id] === q.answer).length * 10,
-        passed = score >= 80;
+        passed = score === 100;
       const token = passed ? crypto.randomUUID() : undefined;
       if (token) proofs.set(token, exam.email);
       return {

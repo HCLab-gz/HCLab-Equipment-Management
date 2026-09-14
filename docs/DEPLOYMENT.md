@@ -9,8 +9,11 @@ GitHub Pages 托管 HTML/CSS/JavaScript，无法自身保存跨用户预约或�
 1. `supabase/migrations/001_platform.sql`：表、RLS、审批/预约/违规 RPC、注册考试校验触发器。
 2. `supabase/migrations/002_questions.sql`：30 道题与正确答案，放在不公开的 `private` schema。
 3. `supabase/migrations/003_storage.sql`：设备图片桶，最大 2 MB，仅管理员能上传。
+4. `supabase/migrations/004_exam_full_marks.sql`：更新为 100 分满分才合格、条例版本 v2，作废旧版本未消费的考试凭证。
 
 这些是首次安装迁移，001 和 003 不能反复整份执行。现有项目升级应新增迁移文件，不应重置生产数据库。
+
+已执行 001—003 的项目只需补充执行 004；现有用户、设备和预约保留，未完成注册的旧版考试需重新抽题。全新项目也必须执行 004，才能启用满分准入规则。
 
 在 Authentication 配置 Email 登录，启用邮箱验证，密码最短长度设为 10。设置 Site URL：
 
@@ -96,7 +99,7 @@ GitHub 仓库 → Settings → Secrets and variables → Actions → **Variables
 
 条例内容：`src/data/rules.ts`。演示题库：`src/data/questions.ts`。修改后可运行 `node scripts/generate-question-migration.mjs` 生成题库 SQL；对于已上线数据库，复制生成内容作为**新的增量迁移**执行，并审查变更。
 
-条例版本在前端和数据库注册校验中均为 `2026-09-v1`，正式发布新版本时需同步更新。当前不强制现有用户重新考试，若未来需要应通过独立迁移实现。
+条例版本在前端和数据库注册校验中均为 `2026-09-v2`，正式发布新版本时需同步更新。当前不强制现有用户重新考试，若未来需要应通过独立迁移实现。
 
 生产数据应使用 Supabase 备份机制。违规记录只追加，若经复核撤销或更正，由项目负责人在数据库维护并记录复核依据；页面目前不提供随意删除或清空处罚的入口。
 

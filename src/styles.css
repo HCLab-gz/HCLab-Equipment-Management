@@ -280,6 +280,7 @@ a:focus-visible {
   align-items: center;
 }
 .demo-bar i {
+  flex-shrink: 0;
   width: 5px;
   height: 5px;
   background: #98a86e;
@@ -446,6 +447,7 @@ a:focus-visible {
   padding-bottom: 25px;
 }
 .room-count {
+  margin-top: 25px;
   display: flex;
   align-items: center;
   gap: 6px;

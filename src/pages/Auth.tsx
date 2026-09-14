@@ -327,7 +327,7 @@ export function Register() {
             <div className="exam-header">
               <div>
                 <h2>实验室准入考试</h2>
-                <p>随机 10 道单选题 · 每题 10 分 · 80 分合格 · 30 分钟内提交</p>
+                <p>随机 10 道单选题 · 每题 10 分 · 100 分满分合格 · 30 分钟内提交</p>
               </div>
               <strong>
                 {Object.keys(answers).length}

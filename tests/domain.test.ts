@@ -71,21 +71,12 @@ describe('准入与考试', () => {
       ),
     ).toBe(false);
   });
-  it('遗漏答案不能合格，80 分可通过', () => {
-    expect(gradeExam([0, 1, 2, 3, 0, 1, 2, 3, 0, 1], {}).passed).toBe(false);
-    expect(
-      gradeExam([0, 1, 2, 3, 0, 1, 2, 3, 0, 1], {
-        0: 0,
-        1: 1,
-        2: 2,
-        3: 3,
-        4: 0,
-        5: 1,
-        6: 2,
-        7: 3,
-        8: 2,
-        9: 2,
-      }),
-    ).toEqual({ score: 80, passed: true });
+  it('必须完整答对十题，80、90 分和漏答均不能通过', () => {
+    const correct = [0, 1, 2, 3, 0, 1, 2, 3, 0, 1];
+    const answers = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 0, 5: 1, 6: 2, 7: 3, 8: 0, 9: 1 };
+    expect(gradeExam(correct, {}).passed).toBe(false);
+    expect(gradeExam(correct, { ...answers, 8: 2, 9: 2 })).toEqual({ score: 80, passed: false });
+    expect(gradeExam(correct, { ...answers, 9: 2 })).toEqual({ score: 90, passed: false });
+    expect(gradeExam(correct, answers)).toEqual({ score: 100, passed: true });
   });
 });

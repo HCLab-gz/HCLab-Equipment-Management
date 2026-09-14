@@ -1,6 +1,7 @@
 import { it, expect } from 'vitest';
 import { createDemoService } from '../src/lib/demo';
 import { dateKey, offsetDay } from '../src/lib/domain';
+import { questions } from '../src/data/questions';
 const memory = () => {
   const m = new Map<string, string>();
   return {
@@ -13,6 +14,36 @@ const memory = () => {
     },
   };
 };
+it.each([80, 90, 100])('演示考试 %i 分时，仅满分发放注册凭证', async (score) => {
+  const api = createDemoService(memory());
+  const email = `exam-${score}@example.test`;
+  const exam = await api.startExam(email);
+  const answers = Object.fromEntries(
+    exam.questions.map((q, i) => {
+      const answer = questions.find((item) => item.id === q.id)!.answer;
+      return [q.id, i < score / 10 ? answer : (answer + 1) % 4];
+    }),
+  );
+  const result = await api.submitExam(exam.id, answers);
+  expect(result.score).toBe(score);
+  const registration = {
+    email,
+    token: result.token ?? 'no-proof',
+    password: 'DemoOnly-Exam-2026',
+    name: '考试验收',
+    student_id: 'DEMO-QA',
+    project: '演示',
+  };
+  if (score < 100) {
+    await expect(api.register(registration)).rejects.toThrow(/考试/);
+    expect(result.passed).toBe(false);
+    expect(result.token).toBeUndefined();
+  } else {
+    expect(result.passed).toBe(true);
+    await api.register(registration);
+    expect((await api.snapshot()).profiles.find((p) => p.email === email)?.role).toBe('user');
+  }
+});
 it('普通用户不能新增设备或批准预约，自己可以提交并取消', async () => {
   const api = createDemoService(memory());
   await api.demoLogin!('user');

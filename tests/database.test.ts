@@ -25,6 +25,7 @@ beforeAll(async () => {
   );
   await db.exec(readFileSync('supabase/migrations/001_platform.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/002_questions.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/004_exam_full_marks.sql', 'utf8'));
   await db.exec(
     `alter table auth.users disable trigger all;insert into auth.users(id,email) values ('${admin}','admin@test.edu'),('${student}','user@test.edu'),('${other}','other@test.edu');alter table auth.users enable trigger all;insert into public.profiles(id,email,name,student_id,project,role) values ('${admin}','admin@test.edu','管理员','A','公共','admin'),('${student}','user@test.edu','同学甲','U','操作','user'),('${other}','other@test.edu','同学乙','O','控制','user');`,
   );
@@ -156,6 +157,40 @@ it('考试不泄露答案，提交后不可重判，注册强制普通用户且�
   await expect(
     db.exec("insert into auth.users(id,email) values (gen_random_uuid(),'bypass@test.edu')"),
   ).rejects.toThrow();
+});
+it.each([80, 90])('服务端考试 %i 分不发放凭证，注册时也拒绝非满分凭证', async (score) => {
+  const email = `exam-${score}@test.edu`;
+  await identity(null, 'anon');
+  const exam = await rpc('start_exam', [email]);
+  await identity(null, 'postgres');
+  const qs = await db.query<{ id: number; answer: number }>(
+    'select id,answer from private.questions',
+  );
+  const answers = Object.fromEntries(
+    exam.questions.map((q: any, i: number) => {
+      const answer = qs.rows.find((item) => item.id === q.id)!.answer;
+      return [q.id, i < score / 10 ? answer : (answer + 1) % 4];
+    }),
+  );
+  await identity(null, 'anon');
+  const result = await rpc('submit_exam', [exam.id, answers]);
+  expect(result.score).toBe(score);
+  expect(result.passed).toBe(false);
+  expect(result.token).toBeNull();
+  await identity(null, 'postgres');
+  // 模拟旧规则签发的凭证；注册入口必须再次检查实际分数。
+  const proof = (
+    await db.query<{ token: string }>(
+      'update private.exam_attempts set token=gen_random_uuid() where id=$1 returning token',
+      [exam.id],
+    )
+  ).rows[0].token;
+  await expect(
+    db.query(
+      'insert into auth.users(id,email,raw_user_meta_data) values(gen_random_uuid(),$1,$2)',
+      [email, { exam_token: proof, name: '未满分同学', student_id: 'EXAM', project: '测试' }],
+    ),
+  ).rejects.toThrow(/考试/);
 });
 it('续约衔接同一使用者的原预约，保留交接记录而不虚构物理归还', async () => {
   await identity(null, 'postgres');

@@ -31,7 +31,6 @@ export function Layout() {
               HCLab<span className="brand-divider"> / </span>
               <b>仪器管理平台</b>
             </strong>
-            <small>让设备有序流转，让研究专注向前</small>
           </span>
         </Link>
         <nav className="main-nav" aria-label="主导航">
@@ -101,7 +100,8 @@ export function Layout() {
         <div className="demo-bar">
           <span>
             <i />
-            演示模式 · 示例设备与账号仅保存在当前浏览器，不与其他同学同步
+            演示模式 ·
+            管理员、项目、实验室分配和存放位置均为示例，未经核实；数据仅保存在当前浏览器，不与其他同学同步
           </span>
           <Link to="/login">
             体验用户 / 管理员 <ArrowUpRight size={13} />

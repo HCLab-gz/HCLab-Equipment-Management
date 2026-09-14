@@ -69,14 +69,11 @@ export function Dashboard() {
             <span>我们的实验空间</span>
             <span>02 / LABS</span>
           </div>
-          {(['504', '505'] as const).map((room, i) => (
+          {(['504', '505'] as const).map((room) => (
             <Link to={`/equipment?room=${room}`} className={`room-tile room-${room}`} key={room}>
               <span className="room-number">
                 {room}
                 <ArrowUpRight size={20} />
-              </span>
-              <span className="room-description">
-                {i === 0 ? '机器人与操作实验区' : '机器人与电子工具区'}
               </span>
               <span className="room-count">
                 <i />
@@ -185,7 +182,7 @@ export function Dashboard() {
                   ? '你的平台准入状态正常'
                   : '你的平台准入权限已停用'
                 : '新成员须阅读条例并通过准入考试'}
-              <small>{user ? '按预约批准时段使用设备' : '随机 10 道单选题 · 80 分合格'}</small>
+              <small>{user ? '按预约批准时段使用设备' : '随机 10 道单选题 · 100 分满分合格'}</small>
             </span>
           </div>
         </section>

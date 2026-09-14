@@ -116,7 +116,7 @@ export function gradeExam(correct: number[], answers: Record<number, number>) {
   );
   return {
     score,
-    passed: correct.length === 10 && Object.keys(answers).length === 10 && score >= 80,
+    passed: correct.length === 10 && Object.keys(answers).length === 10 && score === 100,
   };
 }
 export function slots(open: string, close: string) {
