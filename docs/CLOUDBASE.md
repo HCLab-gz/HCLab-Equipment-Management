@@ -19,7 +19,7 @@ CloudBase 控制台 HTTP 网关 → 跨域设置中允许 `http://127.0.0.1:5173
 
 ## 数据库和注册云函数
 
-此环境已执行 `cloudbase/migrations/` 内四份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
+此环境已执行 `cloudbase/migrations/` 内五份迁移并部署 `hclab-register`。**不要再把 Supabase 迁移复制到此环境执行**；两者原生身份结构不同。
 
 维护时使用官方 CloudBase CLI 3.8.1 或兼容版本，先 `tcb login` 完成本机授权；部署设置在 `cloudbaserc.json`。在项目根目录运行：
 
@@ -82,3 +82,7 @@ returning id, name, email, role;
 验证命令为 `npm test` 和 `npm run build`。数据库测试运行真实 PostgreSQL SQL，并模拟本环境的原生身份结构；真实环境联调另见实施记录。
 
 2026-09-14：条例全文提取后升为 `2026-09-v3`。迁移 `20260914000003_rules_update.sql` 使新考试采用新版本；已有考试和凭证保持原有效期，新成员资料记录其实际考试版本。既有成员的准入记录保持不变，无须重新注册。
+
+2026-09-14：迁移 `20260914000004_holiday_question.sql` 将小长假设备处理题的正确选项改为“关闭设备并断电”，同步移除解析中的连续运行例外。新抽题使用更新内容；已有试卷保留原快照，需重新开始考试才能看到新选项。
+
+修改条例后须同步核对 `src/data/questions.ts` 中的选项和解析，并通过新增迁移更新云端 `private.questions`；修改条例正文不会自动更新题库。已应用的迁移和已生成的考试快照不应重写。
