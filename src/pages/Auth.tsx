@@ -81,6 +81,9 @@ export function Login() {
         </button>
       </form>
       <p className="auth-footer">
+        <Link to="/reset-password">忘记密码？</Link>
+      </p>
+      <p className="auth-footer">
         {admin ? (
           <Link to="/login">返回用户登录</Link>
         ) : (

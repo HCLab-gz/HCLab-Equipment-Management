@@ -1,5 +1,6 @@
 import cloudbase from '@cloudbase/js-sdk';
 import { imageExtension } from './images';
+import { resetEmail, validateResetPassword, passwordResetError } from './passwordReset';
 import type { generatePGClient } from '@cloudbase/js-sdk/mysql';
 import { readBrowserConfig } from './browserConfig';
 import { registrationPasswordError } from './registration';
@@ -142,6 +143,53 @@ export function createCloudBaseService(): DataService {
     session: profile,
     login,
     logout,
+    async requestPasswordReset(value) {
+      const email = resetEmail(value);
+      let verificationId: string;
+      try {
+        const verification = await app.auth.getVerification({
+          email,
+          usage: 'recovery',
+          target: 'USER',
+        });
+        if (!verification.verification_id) throw new Error('Missing verification ID');
+        verificationId = verification.verification_id;
+      } catch (error) {
+        throw passwordResetError(error);
+      }
+      let completed = false,
+        pending = false;
+      return {
+        email,
+        async complete(code, password) {
+          if (completed) throw new Error('密码已重置，请使用新密码登录');
+          if (pending) throw new Error('正在重置密码，请勿重复提交');
+          validateResetPassword(code, password, 'cloudbase');
+          pending = true;
+          try {
+            // A recovery token is issued only after CloudBase validates the email code.
+            // Bind both steps to the original email/challenge; never accept a UID from the form.
+            const verification = await app.auth.verify({
+              verification_id: verificationId,
+              verification_code: code.trim(),
+            });
+            if (!verification.verification_token) throw new Error('Invalid verification token');
+            await app.auth.resetPassword({
+              email,
+              new_password: password,
+              verification_token: verification.verification_token,
+            });
+            completed = true;
+          } catch (error) {
+            throw passwordResetError(error);
+          } finally {
+            pending = false;
+          }
+          // Unlike the convenience API, recovery never signs in with an unreviewed identity.
+          await logout().catch(() => {});
+        },
+      };
+    },
     onSessionInvalidated(callback) {
       const {
         data: { subscription },

@@ -10,6 +10,7 @@ import { EquipmentDetail } from './pages/EquipmentDetail';
 import { Records } from './pages/Records';
 import { Membership } from './pages/Membership';
 import { Admin } from './pages/Admin';
+import { PasswordReset } from './pages/PasswordReset';
 import './styles.css';
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="equipment" element={<Catalog />} />
             <Route path="equipment/:id" element={<EquipmentDetail />} />
             <Route path="login" element={<Login />} />
+            <Route path="reset-password" element={<PasswordReset />} />
             <Route path="register" element={<Register />} />
             <Route path="rules" element={<RulesPage />} />
             <Route path="records" element={<Records />} />

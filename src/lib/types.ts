@@ -141,6 +141,7 @@ export interface DataService {
   login(email: string, password: string): Promise<Profile>;
   demoLogin?(role: Role): Promise<Profile>;
   logout(): Promise<void>;
+  requestPasswordReset?(email: string): Promise<import('./passwordReset').PasswordResetChallenge>;
   onSessionInvalidated?(callback: () => void): () => void;
   snapshot(): Promise<Snapshot>;
   startExam(email: string): Promise<Exam>;

@@ -58,6 +58,9 @@ function fakeApp() {
   const authListeners = new Set<(event: string) => void>();
   return {
     auth: {
+      getVerification: vi.fn(async () => ({ verification_id: 'recovery-challenge' })),
+      verify: vi.fn(async () => ({ verification_token: 'verified-email-token' })),
+      resetPassword: vi.fn(async () => undefined),
       onAuthStateChange: vi.fn((callback: (event: string) => void) => {
         authListeners.add(callback);
         return { data: { subscription: { unsubscribe: () => authListeners.delete(callback) } } };
@@ -404,5 +407,88 @@ it('超级管理员可登录；待审核申请保留查询会话并提示审核'
     p_id: 'request-123',
     p_action: 'reject',
     p_note: '无法核实身份',
+  });
+});
+
+it('邮箱找回只发送原生 recovery 验证码，完成后修改原账号密码且不自动登录', async () => {
+  const api = await loadService();
+  const challenge = await api.requestPasswordReset!(' MEMBER@Example.com ');
+  expect(challenge.email).toBe('member@example.com');
+  expect(app.auth.getVerification).toHaveBeenCalledWith({
+    email: 'member@example.com',
+    usage: 'recovery',
+    target: 'USER',
+  });
+  expect(app.auth.resetPassword).not.toHaveBeenCalled();
+  await challenge.complete('123456', 'NewSecure123!');
+  expect(app.auth.verify).toHaveBeenCalledWith({
+    verification_id: 'recovery-challenge',
+    verification_code: '123456',
+  });
+  expect(app.auth.resetPassword).toHaveBeenCalledWith({
+    email: 'member@example.com',
+    new_password: 'NewSecure123!',
+    verification_token: 'verified-email-token',
+  });
+  expect(app.auth.signInWithPassword).not.toHaveBeenCalled();
+  expect(app.rpc).not.toHaveBeenCalled();
+  expect(app.callFunction).not.toHaveBeenCalled();
+  expect(app.auth.signOut).toHaveBeenCalled();
+  await expect(challenge.complete('123456', 'AgainSecure123!')).rejects.toThrow('密码已重置');
+  expect(app.auth.resetPassword).toHaveBeenCalledTimes(1);
+});
+it('验证码验证失败时绝不修改密码或创建账号', async () => {
+  const api = await loadService();
+  const challenge = await api.requestPasswordReset!('member@example.com');
+  app.auth.verify.mockRejectedValueOnce({
+    code: 'invalid_argument',
+    message: 'verification code expired',
+  });
+  await expect(challenge.complete('000000', 'NewSecure123!')).rejects.toThrow(
+    '验证码不正确或已过期',
+  );
+  expect(app.auth.resetPassword).not.toHaveBeenCalled();
+  expect(app.auth.signInWithPassword).not.toHaveBeenCalled();
+  expect(app.callFunction).not.toHaveBeenCalled();
+});
+it('无效邮箱、验证码和弱密码在调用服务前拒绝', async () => {
+  const api = await loadService();
+  await expect(api.requestPasswordReset!('not-an-email')).rejects.toThrow('有效');
+  expect(app.auth.getVerification).not.toHaveBeenCalled();
+  const challenge = await api.requestPasswordReset!('member@example.com');
+  await expect(challenge.complete('123', 'NewSecure123!')).rejects.toThrow('6 位');
+  await expect(challenge.complete('123456', 'weak')).rejects.toThrow('密码须');
+  expect(app.auth.verify).not.toHaveBeenCalled();
+  expect(app.auth.resetPassword).not.toHaveBeenCalled();
+});
+it('发信限流和未配置时显示中文错误，不回显服务内部信息', async () => {
+  const api = await loadService();
+  app.auth.getVerification.mockRejectedValueOnce({
+    code: 'resource_exhausted',
+    message: 'private diagnostic',
+  });
+  await expect(api.requestPasswordReset!('member@example.com')).rejects.toThrow('过于频繁');
+  app.auth.getVerification.mockRejectedValueOnce({ message: 'smtp is not set: secret-value' });
+  await expect(api.requestPasswordReset!('member@example.com')).rejects.toThrow('尚未配置');
+});
+it('重置请求进行中禁止重复提交，并保留首次绑定的邮箱', async () => {
+  const api = await loadService();
+  const first = await api.requestPasswordReset!('first@example.com');
+  await api.requestPasswordReset!('second@example.com');
+  let resolve!: (value: { verification_token: string }) => void;
+  app.auth.verify.mockImplementationOnce(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  const pending = first.complete('123456', 'NewSecure123!');
+  await expect(first.complete('123456', 'NewSecure123!')).rejects.toThrow('勿重复');
+  resolve({ verification_token: 'first-token' });
+  await pending;
+  expect(app.auth.resetPassword).toHaveBeenCalledWith({
+    email: 'first@example.com',
+    new_password: 'NewSecure123!',
+    verification_token: 'first-token',
   });
 });
