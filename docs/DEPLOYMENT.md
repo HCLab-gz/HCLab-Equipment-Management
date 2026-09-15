@@ -19,7 +19,7 @@ GitHub Pages 托管 HTML/CSS/JavaScript，无法自身保存跨用户预约或�
 9. `supabase/migrations/009_all_day_equipment.sql`：支持全天开放以及截止次日零点的最后半小时预约。
 10. `supabase/migrations/010_slot_booker_names.sql`：已审核成员可在预约时段查看预约人姓名。
 11. `supabase/migrations/011_multi_day_bookings.sql`：支持连续跨天预约，检查整个区间的开放日、开放时间及原有预约冲突。
-10. `supabase/migrations/010_slot_booker_names.sql`：向已审核成员提供占用时段的预约人姓名。
+12. `supabase/migrations/012_equipment_return_photos.sql`：设备多图与首图封面，私有归还照片存储及归还必传校验；保留旧设备单图和历史归还记录。
 
 这些是首次安装迁移，001 和 003 不能反复整份执行。现有项目升级应新增迁移文件，不应重置生产数据库。
 

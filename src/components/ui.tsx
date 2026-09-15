@@ -30,6 +30,7 @@ export function EquipmentArt({
     >
       {equipment.image_url ? (
         <img
+          key={equipment.image_url}
           src={equipment.image_url}
           alt={equipment.name}
           onError={(e) => {

@@ -1,4 +1,5 @@
 import cloudbase from '@cloudbase/js-sdk';
+import { imageExtension } from './images';
 import type { generatePGClient } from '@cloudbase/js-sdk/mysql';
 import { readBrowserConfig } from './browserConfig';
 import { registrationPasswordError } from './registration';
@@ -190,10 +191,7 @@ export function createCloudBaseService(): DataService {
       await rpc('save_equipment_result', { p_data: input });
     },
     async uploadImage(file) {
-      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2097152)
-        throw new Error('仅支持 2 MB 以内的 JPG、PNG、WebP 图片');
-      const extension =
-        file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+      const extension = imageExtension(file, 2);
       const path = `${crypto.randomUUID()}.${extension}`;
       const bucket = app.storage.from('equipment-images');
       await request(
@@ -202,11 +200,36 @@ export function createCloudBaseService(): DataService {
       );
       return bucket.getPublicUrl(path).data.publicUrl;
     },
+    async uploadReturnPhoto(bookingId, file) {
+      const extension = imageExtension(file, 10);
+      const path = `${bookingId}/${crypto.randomUUID()}.${extension}`;
+      await request(
+        () =>
+          app.storage
+            .from('return-photos')
+            .upload(path, file, { contentType: file.type, upsert: false }),
+        'image',
+      );
+      return path;
+    },
+    async returnPhotoUrl(path) {
+      const result = await request(
+        () => app.storage.from('return-photos').createSignedUrl(path, 600),
+        'image',
+      );
+      if (!result.data?.fullSignedURL) throw new Error('归还照片暂时无法读取，请重试');
+      return result.data.fullSignedURL;
+    },
     async book(input) {
       await rpc('create_booking_result', { p_data: input });
     },
-    async bookingAction(id, action, note = '') {
-      await rpc('booking_action', { p_id: id, p_action: action, p_note: note });
+    async bookingAction(id, action, note = '', returnPhoto = '') {
+      await rpc('booking_action', {
+        p_id: id,
+        p_action: action,
+        p_note: note,
+        ...(action === 'return' ? { p_return_photo: returnPhoto } : {}),
+      });
     },
     async markRead() {
       await rpc('mark_notices_read');

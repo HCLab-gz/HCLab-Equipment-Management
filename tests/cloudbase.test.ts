@@ -46,6 +46,10 @@ function fakeApp() {
     error: null as unknown,
   }));
   const bucket = {
+    createSignedUrl: vi.fn(async (path: string) => ({
+      data: { fullSignedURL: `https://private.example/${path}?token=short-lived` },
+      error: null as unknown,
+    })),
     upload: vi.fn(async () => ({ data: { path: 'image.png' }, error: null as unknown })),
     getPublicUrl: vi.fn((path: string) => ({
       data: { publicUrl: `https://images.example/${path}` },
@@ -358,6 +362,31 @@ describe('CloudBase DataService', () => {
       { contentType: 'image/png', upsert: false },
     );
     expect(url).toMatch(/^https:\/\/images.example\/[a-f0-9-]+\.png$/);
+  });
+  it('归还照片上传至预约专属私有路径，查看使用签名地址，归还提交绑定路径', async () => {
+    const api = await loadService();
+    const id = '10000000-0000-0000-0000-000000000001';
+    const file = new File(['image'], 'return.png', { type: 'image/png' });
+    const path = await api.uploadReturnPhoto(id, file);
+    expect(path).toMatch(new RegExp(`^${id}/[a-f0-9-]+\\.png$`));
+    expect(app.storage.from).toHaveBeenCalledWith('return-photos');
+    expect(app.bucket.upload).toHaveBeenCalledWith(path, file, {
+      contentType: 'image/png',
+      upsert: false,
+    });
+    expect(app.bucket.getPublicUrl).not.toHaveBeenCalled();
+    expect(await api.returnPhotoUrl(path)).toMatch(/^https:\/\/private.example\//);
+    expect(app.bucket.createSignedUrl).toHaveBeenCalledWith(path, 600);
+    await api.bookingAction(id, 'return', '外观正常', path);
+    expect(app.rpc).toHaveBeenCalledWith('booking_action', {
+      p_id: id,
+      p_action: 'return',
+      p_note: '外观正常',
+      p_return_photo: path,
+    });
+    await expect(
+      api.uploadReturnPhoto(id, new File(['bad'], 'bad.svg', { type: 'image/svg+xml' })),
+    ).rejects.toThrow(/图片/);
   });
 });
 it('超级管理员可登录；待审核申请保留查询会话并提示审核', async () => {

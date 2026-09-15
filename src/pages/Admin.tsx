@@ -13,6 +13,7 @@ import {
 import { MembershipReview } from '../components/MembershipReview';
 import { isAdministrator, isApproved, isSuperAdministrator, ROLE_LABELS } from '../lib/membership';
 import { useApp } from '../lib/store';
+import { equipmentImages, imageExtension } from '../lib/images';
 import {
   DEFAULT_CATEGORIES,
   cnDate,
@@ -74,6 +75,7 @@ export function Admin() {
       description: '',
       precautions: '',
       image_url: '',
+      image_urls: [],
     });
     setError('');
   }
@@ -529,19 +531,36 @@ export function Admin() {
               </label>
               <label className="form-field span-2">
                 <span>
-                  <Upload size={14} /> 设备图片（JPG / PNG / WebP，最大 2 MB）
+                  <Upload size={14} /> 设备图片（可多选，每张最大 2 MB）
                 </span>
                 <input
                   type="file"
+                  multiple
+                  aria-label="上传设备图片（可多选）"
                   accept="image/jpeg,image/png,image/webp"
                   disabled={busy}
                   onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+                    const files = Array.from(e.target.files ?? []);
+                    e.target.value = '';
+                    if (!files.length) return;
                     setBusy(true);
                     setError('');
                     try {
-                      update('image_url', await api.uploadImage(file));
+                      files.forEach((file) => imageExtension(file, 2));
+                      for (const file of files) {
+                        const url = await api.uploadImage(file);
+                        setEditing((current) => {
+                          if (!current) return current;
+                          const images = [
+                            ...equipmentImages({
+                              image_url: current.image_url ?? '',
+                              image_urls: current.image_urls,
+                            }),
+                            url,
+                          ];
+                          return { ...current, image_urls: images, image_url: images[0] };
+                        });
+                      }
                     } catch (e) {
                       setError((e as Error).message);
                     } finally {
@@ -549,10 +568,37 @@ export function Admin() {
                     }
                   }}
                 />
-                {editing.image_url && (
-                  <img className="upload-preview" src={editing.image_url} alt="设备图片预览" />
-                )}
+                <small>按上传顺序展示，第一张为封面。支持 JPG、PNG、WebP。</small>
               </label>
+              <div className="equipment-upload-list span-2">
+                {equipmentImages({
+                  image_url: editing.image_url ?? '',
+                  image_urls: editing.image_urls,
+                }).map((url, i) => (
+                  <div className="equipment-upload-item" key={`${url}-${i}`}>
+                    <img src={url} alt={`设备图片 ${i + 1}`} />
+                    <span>{i === 0 ? '封面' : `图片 ${i + 1}`}</span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-label={`移除设备图片 ${i + 1}`}
+                      onClick={() => {
+                        const images = equipmentImages({
+                          image_url: editing.image_url ?? '',
+                          image_urls: editing.image_urls,
+                        }).filter((_, index) => index !== i);
+                        setEditing((current) => ({
+                          ...current,
+                          image_urls: images,
+                          image_url: images[0] ?? '',
+                        }));
+                      }}
+                    >
+                      移除
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
             {error && (
               <p role="alert" className="inline-error">

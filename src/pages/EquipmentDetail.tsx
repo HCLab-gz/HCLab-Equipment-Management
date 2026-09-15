@@ -23,7 +23,8 @@ import {
   accessState,
   timeKey,
 } from '../lib/domain';
-import { EquipmentArt, Badge, Empty } from '../components/ui';
+import { Badge, Empty } from '../components/ui';
+import { EquipmentGallery } from '../components/EquipmentGallery';
 import {
   selectBookingSlot,
   isSlotSelected,
@@ -152,7 +153,7 @@ export function EquipmentDetail() {
       <div className="detail-layout">
         <div>
           <div className="detail-overview panel">
-            <EquipmentArt equipment={e} large />
+            <EquipmentGallery key={e.id} equipment={e} />
             <div className="detail-intro">
               <div className="row-between">
                 <span className="eyebrow">

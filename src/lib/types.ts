@@ -33,6 +33,7 @@ export interface Equipment {
   description: string;
   precautions: string;
   image_url: string;
+  image_urls?: string[];
   asset_code: string;
   created_at: string;
 }
@@ -47,6 +48,7 @@ export interface Booking {
   status: BookingStatus;
   review_note: string;
   return_note: string;
+  return_photo_path?: string;
   returned_at: string | null;
   parent_id: string | null;
   created_at: string;
@@ -147,11 +149,14 @@ export interface DataService {
   reviewMembership(id: string, action: 'approve' | 'reject', note?: string): Promise<void>;
   saveEquipment(input: Partial<Equipment>): Promise<void>;
   uploadImage(file: File): Promise<string>;
+  uploadReturnPhoto(bookingId: string, file: File): Promise<string>;
+  returnPhotoUrl(path: string): Promise<string>;
   book(input: BookingInput): Promise<void>;
   bookingAction(
     id: string,
     action: 'approve' | 'reject' | 'cancel' | 'checkout' | 'return',
     note?: string,
+    returnPhoto?: string,
   ): Promise<void>;
   markRead(): Promise<void>;
   recordViolation(userId: string, reason: string): Promise<void>;

@@ -5,6 +5,8 @@ import { ClipboardList, Search, ArrowUpRight } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { BOOKING_LABELS, cnDate, accessState } from '../lib/domain';
 import { Badge, Empty, Modal } from '../components/ui';
+import { PhotoPreview, ReturnPhoto } from '../components/ReturnPhoto';
+import { imageExtension } from '../lib/images';
 import type { Booking } from '../lib/types';
 export function Records() {
   const { user, data, api, refresh, toast } = useApp(),
@@ -17,6 +19,8 @@ export function Records() {
     ),
     [note, setNote] = useState(''),
     [confirmed, setConfirmed] = useState(false),
+    [photoFile, setPhotoFile] = useState<File | null>(null),
+    [photoPath, setPhotoPath] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   if (!user)
@@ -41,17 +45,22 @@ export function Records() {
     setError('');
     setNote('');
     setConfirmed(false);
+    setPhotoFile(null);
+    setPhotoPath('');
   };
   async function act() {
     if (!dialog) return;
     setBusy(true);
     setError('');
     try {
+      if (dialog.action === 'return' && (!confirmed || !note.trim() || !photoPath))
+        throw new Error('请确认设备归位、填写设备情况并上传归还照片');
       const eq = data.equipment.find((e) => e.id === dialog.b.equipment_id);
       await api.bookingAction(
         dialog.b.id,
         dialog.action,
         dialog.action === 'return' ? `已归还至 ${eq?.room} · ${eq?.location}；${note}` : note,
+        dialog.action === 'return' ? photoPath : undefined,
       );
       await refresh();
       setDialog(null);
@@ -170,6 +179,7 @@ export function Records() {
                           </small>
                         )}
                         {b.returned_at && <small>{cnDate(b.returned_at)}</small>}
+                        {b.return_photo_path && <ReturnPhoto path={b.return_photo_path} />}
                         {!b.review_note && !b.return_note && <span className="muted">—</span>}
                       </td>
                       <td>
@@ -260,12 +270,50 @@ export function Records() {
                   我已关闭设备并实际放回上述位置
                 </label>
                 <label className="form-field">
+                  归还照片（必传）
+                  <small>请拍摄一张同时包含设备和当前放置位置的照片，便于核对归位情况。</small>
+                  <input
+                    type="file"
+                    aria-label="上传归还照片"
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    disabled={busy}
+                    onChange={async (ev) => {
+                      const file = ev.target.files?.[0];
+                      ev.target.value = '';
+                      if (!file) return;
+                      setPhotoPath('');
+                      setPhotoFile(null);
+                      setError('');
+                      setBusy(true);
+                      try {
+                        imageExtension(file, 10);
+                        setPhotoFile(file);
+                        setPhotoPath(await api.uploadReturnPhoto(dialog.b.id, file));
+                      } catch (reason) {
+                        setError((reason as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  />
+                  <small>
+                    支持 JPG、PNG、WebP，最大 10 MB。
+                    {photoPath ? '照片已上传。' : '上传成功后才能完成归还。'}
+                  </small>
+                </label>
+                {photoFile && <PhotoPreview file={photoFile} />}
+                <label className="form-field">
                   设备情况 / 异常说明
+                  <small className="return-fault-reminder">
+                    如果设备存在故障，请务必在备注中说明故障现象。
+                  </small>
                   <textarea
                     maxLength={500}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="例如：外观与功能正常，附件齐全"
+                    aria-label="设备情况或故障备注"
+                    placeholder="正常时填写设备情况；如存在故障，请备注故障现象"
                   />
                 </label>
               </>
@@ -288,7 +336,9 @@ export function Records() {
             </button>
             <button
               className="button"
-              disabled={busy || (dialog.action === 'return' && (!confirmed || !note.trim()))}
+              disabled={
+                busy || (dialog.action === 'return' && (!confirmed || !note.trim() || !photoPath))
+              }
               onClick={act}
             >
               {busy ? '正在提交…' : '确认提交'}

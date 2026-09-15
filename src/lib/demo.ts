@@ -1,4 +1,5 @@
 import { seed, superAdministrator } from '../data/seed';
+import { equipmentImages, imageExtension } from './images';
 import { questions } from '../data/questions';
 import { RULES_VERSION } from '../data/rules';
 import { isApproved, isAdministrator, isSuperAdministrator, ROLE_LABELS } from './membership';
@@ -12,9 +13,20 @@ import {
 } from './domain';
 import type { DataService, Snapshot, Equipment, Profile, AnswerQuestion } from './types';
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-type Database = Snapshot & { passwords: Record<string, { salt: string; hash: string }> };
+type Database = Snapshot & {
+  passwords: Record<string, { salt: string; hash: string }>;
+  returnPhotos?: Record<string, { url: string; bookingId: string; userId: string }>;
+};
 const KEY = 'hclab-demo-v1',
   SESSION = 'hclab-demo-session';
+function readPhoto(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
 async function digest(password: string, salt: string) {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -292,10 +304,18 @@ export function createDemoService(storage: StorageLike): DataService {
         id = existing?.id ?? crypto.randomUUID();
       const eq = {
         ...input,
+        image_urls:
+          input.image_urls ??
+          (existing && existing.image_url === input.image_url
+            ? equipmentImages(existing)
+            : input.image_url
+              ? [input.image_url]
+              : []),
         id,
         manager_name: db.profiles.find((p) => p.id === input.manager_id)!.name,
         created_at: existing?.created_at ?? new Date().toISOString(),
       } as Equipment;
+      eq.image_url = eq.image_urls?.[0] ?? '';
       db.equipment = existing
         ? db.equipment.map((e) => (e.id === id ? eq : e))
         : [eq, ...db.equipment];
@@ -303,17 +323,32 @@ export function createDemoService(storage: StorageLike): DataService {
     },
     async uploadImage(file) {
       requireUser(read(), true);
+      imageExtension(file, 2);
+      return readPhoto(file);
+    },
+    async uploadReturnPhoto(bookingId, file) {
+      const ext = imageExtension(file, 10);
+      const db = read(),
+        p = requireUser(db);
       if (
-        !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
-        file.size > 2 * 1024 * 1024
+        !db.bookings.some((b) => b.id === bookingId && b.user_id === p.id && b.status === 'in_use')
       )
-        throw new Error('仅支持 2 MB 以内的 JPG、PNG、WebP 图片');
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('图片读取失败'));
-        reader.readAsDataURL(file);
-      });
+        throw new Error('只能为本人使用中的预约上传归还照片');
+      const path = `${bookingId}/${crypto.randomUUID()}.${ext}`,
+        url = await readPhoto(file);
+      const fresh = read();
+      fresh.returnPhotos ??= {};
+      fresh.returnPhotos[path] = { url, bookingId, userId: p.id };
+      save(fresh);
+      return path;
+    },
+    async returnPhotoUrl(path) {
+      const db = read(),
+        p = requireUser(db),
+        photo = db.returnPhotos?.[path];
+      if (!photo || (photo.userId !== p.id && !isAdministrator(p)))
+        throw new Error('无权查看此归还照片');
+      return photo.url;
     },
     async book(input) {
       const db = read(),
@@ -364,7 +399,7 @@ export function createDemoService(storage: StorageLike): DataService {
       );
       save(db);
     },
-    async bookingAction(id, action, note = '') {
+    async bookingAction(id, action, note = '', returnPhoto = '') {
       const db = read(),
         p = requireUser(db),
         b = db.bookings.find((x) => x.id === id);
@@ -434,7 +469,11 @@ export function createDemoService(storage: StorageLike): DataService {
         }
         if (action === 'return') {
           if (b.status !== 'in_use' || !note.trim()) throw new Error('使用中的设备须填写归还情况');
+          const photo = db.returnPhotos?.[returnPhoto];
+          if (!photo || photo.bookingId !== b.id || photo.userId !== p.id)
+            throw new Error('请上传设备及放置位置的照片后再归还');
           b.status = 'returned';
+          b.return_photo_path = returnPhoto;
           b.return_note = note;
           b.returned_at = new Date().toISOString();
         }
