@@ -8,6 +8,8 @@ class SessionInvalidError extends Error {}
 
 function serviceError(error: unknown, operation: 'auth' | 'data' | 'register' | 'image') {
   const e = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
+  // CloudBase's gateway prefixes PostgreSQL SQLSTATE values with DATABASE_.
+  const code = String(e.code ?? '').replace(/^DATABASE_/, '');
   if (
     [
       'PGRST301',
@@ -16,7 +18,7 @@ function serviceError(error: unknown, operation: 'auth' | 'data' | 'register' | 
       'invalid_token',
       'login_required',
       'unauthenticated',
-    ].includes(String(e.code)) ||
+    ].includes(code) ||
     e.errorCode === 16
   )
     return new SessionInvalidError('登录状态已失效，请重新登录');
@@ -29,10 +31,10 @@ function serviceError(error: unknown, operation: 'auth' | 'data' | 'register' | 
       return new Error('登录需要额外验证，请联系管理员检查认证设置');
     return new Error('认证服务暂时不可用，请稍后重试');
   }
-  if (e.code === 'P0001' && typeof e.message === 'string' && /[\u3400-\u9fff]/.test(e.message))
-    return new Error(e.message);
-  if (e.code === '42501') return new Error('没有执行此操作的权限，请确认登录账号');
-  if (['23514', '23502', '22001', '22007', '22008', '22P02'].includes(String(e.code)))
+  if (code === 'P0001' && typeof e.message === 'string' && /[\u3400-\u9fff]/.test(e.message))
+    return new Error(e.message === '该时段已有预约，请选择其他时间' ? '该时间已被预约' : e.message);
+  if (code === '42501') return new Error('没有执行此操作的权限，请确认登录账号');
+  if (['23514', '23502', '22001', '22007', '22008', '22P02'].includes(code))
     return new Error('填写内容不符合要求，请检查必填信息、字数、开放日期和起止时间');
   return new Error(
     operation === 'register'

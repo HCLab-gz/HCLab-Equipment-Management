@@ -233,12 +233,59 @@ describe('CloudBase DataService', () => {
     });
     await expect(
       api.book({ equipment_id: 'eq', starts_at: '', ends_at: '', purpose: '实验' }),
-    ).rejects.toThrow('该时段已有预约');
+    ).rejects.toThrow('该时间已被预约');
     app.rpc.mockResolvedValueOnce({
       data: null,
       error: { code: 'XX000', message: 'private SQL details' },
     });
     await expect(api.snapshot()).rejects.toThrow('数据服务暂时不可用');
+  });
+  it('腾讯云真实 SDK 的 DATABASE_P0001 时间冲突显示指定提示', async () => {
+    let factory: (() => ReturnType<ReturnType<typeof generatePGClient>>) | undefined;
+    const nativeApp = {
+      config: { env: envId },
+      request: {
+        fetch: async () => ({
+          statusCode: 400,
+          data: {
+            code: 'DATABASE_P0001',
+            message: '该时段已有预约，请选择其他时间',
+            requestId: 'regression-request',
+          },
+          header: { 'Content-Type': 'application/json' },
+        }),
+      },
+      getEndPointWithKey: () => ({
+        BASE_URL: `${envId}.api.tcloudbasegateway.com/v1`,
+        PROTOCOL: 'https://',
+      }),
+      registerComponent(component: { name: string; entity: { rdb?: () => unknown } }) {
+        if (component.name === 'rdb')
+          factory = component.entity.rdb!.bind(nativeApp) as typeof factory;
+      },
+    };
+    registerMySQL(nativeApp as unknown as Parameters<typeof registerMySQL>[0]);
+    sdk.init.mockReturnValue({ ...app, rdb: factory });
+    const api = await loadService();
+    await expect(
+      api.book({
+        equipment_id: 'eq',
+        starts_at: '2099-01-05T09:00+08:00',
+        ends_at: '2099-01-05T10:00+08:00',
+        purpose: '冲突测试',
+      }),
+    ).rejects.toThrow(/^该时间已被预约$/);
+    expect(app.auth.signOut).not.toHaveBeenCalled();
+  });
+  it('带 DATABASE 前缀的其他业务错误仍保留原本提示', async () => {
+    const api = await loadService();
+    app.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'DATABASE_P0001', message: '预约开始时间必须晚于当前时间' },
+    });
+    await expect(
+      api.book({ equipment_id: 'eq', starts_at: '', ends_at: '', purpose: '实验' }),
+    ).rejects.toThrow('预约开始时间必须晚于当前时间');
   });
   it('将考试参数发送到 PostgreSQL RPC 并规范化邮箱', async () => {
     const api = await loadService();

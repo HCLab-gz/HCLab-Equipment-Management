@@ -332,7 +332,7 @@ export function createDemoService(storage: StorageLike): DataService {
             overlaps(input.starts_at, input.ends_at, b.starts_at, b.ends_at),
         )
       )
-        throw new Error('该时段已有预约，请选择其他时间');
+        throw new Error('该时间已被预约');
       if (input.parent_id) {
         const old = db.bookings.find((b) => b.id === input.parent_id);
         if (

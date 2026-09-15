@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slotAvailability } from '../src/lib/domain';
+import { slotAvailability, findBookingConflict } from '../src/lib/domain';
 import type { BusySlot } from '../src/lib/types';
 const equipment = {
   id: 'g1',
@@ -97,4 +97,21 @@ describe('预约时段状态', () => {
         .kind,
     ).toBe('unavailable');
   });
+});
+
+it('提交前检查整个申请范围，中间占用同样冲突，相邻和其他设备不冲突', () => {
+  expect(
+    findBookingConflict('g1', '2099-01-05T08:30+08:00', '2099-01-05T10:30+08:00', [booking]),
+  ).toBe(booking);
+  expect(
+    findBookingConflict('g1', '2099-01-05T10:00+08:00', '2099-01-05T10:30+08:00', [booking]),
+  ).toBeUndefined();
+  expect(
+    findBookingConflict('franka', '2099-01-05T09:00+08:00', '2099-01-05T09:30+08:00', [booking]),
+  ).toBeUndefined();
+  expect(
+    findBookingConflict('g1', '2099-01-05T09:00+08:00', '2099-01-05T09:30+08:00', [
+      { ...booking, status: 'cancelled' },
+    ]),
+  ).toBeUndefined();
 });

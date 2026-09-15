@@ -170,6 +170,20 @@ export function slots(open: string, close: string) {
   return result;
 }
 
+export function findBookingConflict(
+  equipmentId: string,
+  startsAt: string,
+  endsAt: string,
+  busy: BusySlot[],
+) {
+  return busy.find(
+    (b) =>
+      b.equipment_id === equipmentId &&
+      ACTIVE_STATUSES.includes(b.status) &&
+      overlaps(startsAt, endsAt, b.starts_at, b.ends_at),
+  );
+}
+
 export function slotAvailability(
   equipment: Parameters<typeof validateBooking>[0] & { id: string },
   day: string,
@@ -182,12 +196,7 @@ export function slotAvailability(
   // An ongoing reservation still shows its user; fully elapsed slots are closed.
   if (+new Date(endsAt) <= +now || validateBooking(equipment, startsAt, endsAt, new Date(0)))
     return { kind: 'unavailable', label: '不开放' };
-  const reservation = busy.find(
-    (b) =>
-      b.equipment_id === equipment.id &&
-      ACTIVE_STATUSES.includes(b.status) &&
-      overlaps(startsAt, endsAt, b.starts_at, b.ends_at),
-  );
+  const reservation = findBookingConflict(equipment.id, startsAt, endsAt, busy);
   if (reservation) return { kind: 'occupied', label: reservation.user_name?.trim() || '已占用' };
   return validateBooking(equipment, startsAt, endsAt, now)
     ? { kind: 'unavailable', label: '不开放' }

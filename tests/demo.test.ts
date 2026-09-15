@@ -57,7 +57,7 @@ it('普通用户不能新增设备或批准预约，自己可以提交并取消'
       purpose: '测试抓取',
     };
   await api.book(input);
-  await expect(api.book(input)).rejects.toThrow();
+  await expect(api.book(input)).rejects.toThrow('该时间已被预约');
   const b = (await api.snapshot()).bookings.find((x) => x.equipment_id === 'g1')!;
   expect(b.status).toBe('pending');
   await api.bookingAction(b.id, 'cancel');

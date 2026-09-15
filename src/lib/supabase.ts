@@ -8,7 +8,10 @@ export function createSupabaseService(): DataService {
   const client = createClient(url, key);
   async function rpc<T = void>(name: string, args?: Record<string, unknown>): Promise<T> {
     const { data, error } = await client.rpc(name, args);
-    if (error) throw new Error(error.message);
+    if (error)
+      throw new Error(
+        error.message === '该时段已有预约，请选择其他时间' ? '该时间已被预约' : error.message,
+      );
     return data as T;
   }
   async function profile(): Promise<Profile | null> {

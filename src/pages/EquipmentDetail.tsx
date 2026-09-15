@@ -18,6 +18,8 @@ import {
   bookingDateTime,
   equipmentHoursLabel,
   slotAvailability,
+  findBookingConflict,
+  validateBooking,
   accessState,
   timeKey,
 } from '../lib/domain';
@@ -72,10 +74,16 @@ export function EquipmentDetail() {
     setError('');
     setBusy(true);
     try {
+      const startsAt = bookingDateTime(day, start),
+        endsAt = bookingDateTime(day, end);
+      if (findBookingConflict(e!.id, startsAt, endsAt, data.busy))
+        throw new Error('该时间已被预约');
+      const timeError = validateBooking(e!, startsAt, endsAt);
+      if (timeError) throw new Error(timeError);
       await api.book({
         equipment_id: e!.id,
-        starts_at: bookingDateTime(day, start),
-        ends_at: bookingDateTime(day, end),
+        starts_at: startsAt,
+        ends_at: endsAt,
         purpose,
         parent_id: parent?.id,
       });
