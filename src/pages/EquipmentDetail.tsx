@@ -17,8 +17,7 @@ import {
   slotEnd,
   bookingDateTime,
   equipmentHoursLabel,
-  overlaps,
-  validateBooking,
+  slotAvailability,
   accessState,
   timeKey,
 } from '../lib/domain';
@@ -39,7 +38,17 @@ export function EquipmentDetail() {
     ),
     [purpose, setPurpose] = useState(parent ? `续约：${parent.purpose}` : ''),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [clock, setClock] = useState(() => new Date());
+  useEffect(() => {
+    const updateClock = () => setClock(new Date());
+    const timer = window.setInterval(updateClock, 30000);
+    window.addEventListener('focus', updateClock);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', updateClock);
+    };
+  }, []);
   useEffect(() => {
     if (!e) return;
     const startTime = parent
@@ -57,16 +66,7 @@ export function EquipmentDetail() {
     );
   const allSlots = slots(e.open_time, e.close_time),
     ends = allSlots.map(slotEnd),
-    occupied = data.busy.filter((b) => b.equipment_id === e.id),
-    blocked = (t: string) => {
-      const next = ends[allSlots.indexOf(t)];
-      return (
-        !!validateBooking(e, bookingDateTime(day, t), bookingDateTime(day, next)) ||
-        occupied.some((b) =>
-          overlaps(bookingDateTime(day, t), bookingDateTime(day, next), b.starts_at, b.ends_at),
-        )
-      );
-    };
+    availability = allSlots.map((t) => slotAvailability(e, day, t, data.busy, clock));
   const selected = (t: string) => t >= start && t < end;
   async function book() {
     setError('');
@@ -204,27 +204,39 @@ export function EquipmentDetail() {
                   </span>
                   <span>
                     <i className="occupied" />
-                    已占用 / 不开放
+                    已占用
+                  </span>
+                  <span>
+                    <i className="unavailable" />
+                    不开放
                   </span>
                 </div>
                 <div className="time-slots">
-                  {allSlots.map((t, i) => (
-                    <button
-                      title={`${t}–${ends[i] === '24:00' ? '次日 00:00' : ends[i]}`}
-                      key={t}
-                      disabled={blocked(t)}
-                      className={selected(t) ? 'selected' : ''}
-                      onClick={() => {
-                        setStart(t);
-                        setEnd(ends[i]);
-                      }}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {allSlots.map((t, i) => {
+                    const state = availability[i];
+                    const label = `${t}–${ends[i] === '24:00' ? '次日 00:00' : ends[i]} · ${state.kind === 'occupied' ? '预约人：' : ''}${state.label}`;
+                    return (
+                      <button
+                        title={label}
+                        aria-label={label}
+                        key={t}
+                        disabled={state.kind !== 'available'}
+                        className={
+                          state.kind === 'available' && selected(t) ? 'selected' : state.kind
+                        }
+                        onClick={() => {
+                          setStart(t);
+                          setEnd(ends[i]);
+                        }}
+                      >
+                        <span>{t}</span>
+                        <small>{state.label}</small>
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="muted calendar-help">
-                  点选起始时段，再在右侧调整结束时间。仅列出开放范围内完整的半小时；待审批申请也会暂占时段。结束时间可选至次日零点的设备，最后一格为
+                  点选起始时段，再在右侧调整结束时间。已结束的时段标记为不开放；已占用时段显示预约人姓名，待审批申请也会暂占时段。全天开放设备的最后一格为
                   23:30—次日 00:00。
                 </p>
               </>

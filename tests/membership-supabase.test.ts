@@ -83,6 +83,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(migration, 'utf8'));
   await db.exec(readFileSync('supabase/migrations/008_equipment_hours.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/009_all_day_equipment.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/010_slot_booker_names.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -172,4 +173,14 @@ it('Supabase 全天设备可保存并预约最后半小时', async () => {
     },
   ]);
   expect(booking).toBeTruthy();
+});
+
+it('Supabase 时段姓名仅对通过审核的账号可见', async () => {
+  await identity(owner);
+  expect((await rpc('get_snapshot')).busy[0]).toHaveProperty('user_name', '现有管理员');
+  const waiting = await register('user');
+  await identity(waiting);
+  expect((await rpc('get_snapshot')).busy).toEqual([]);
+  await identity(null, 'anon');
+  expect((await rpc('get_snapshot')).busy).toEqual([]);
 });

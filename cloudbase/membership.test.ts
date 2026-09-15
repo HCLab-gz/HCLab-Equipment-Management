@@ -108,6 +108,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(migration, 'utf8'));
   await db.exec(readFileSync('cloudbase/migrations/20260914000006_equipment_hours.sql', 'utf8'));
   await db.exec(readFileSync('cloudbase/migrations/20260915000000_all_day_equipment.sql', 'utf8'));
+  await db.exec(readFileSync('cloudbase/migrations/20260915000001_slot_booker_names.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -406,4 +407,39 @@ it('全天设备可预约至次日零点，审批和占用检查仍生效', asyn
     { ...input, starts_at: '2099-01-12T00:00+08:00', ends_at: '2099-01-13T00:00+08:00' },
   ]);
   expect(fullDay.id).toBeTruthy();
+});
+
+it('已审核成员可看到时段预约人姓名，但没有他人完整预约资料；匿名及未通过审核者不可见', async () => {
+  const awaiting = await apply('calendar-pending@example.invalid');
+  await identity(owner, 'authenticated');
+  const booked = await rpc('public.create_booking_result', [
+    {
+      equipment_id: asset,
+      starts_at: '2099-01-20T09:00+08:00',
+      ends_at: '2099-01-20T10:00+08:00',
+      purpose: '不在公共时段中展示的用途',
+    },
+  ]);
+  await identity(member, 'authenticated');
+  const snapshot = await rpc('public.get_snapshot');
+  const busy = snapshot.busy.find(
+    (b: any) => b.equipment_id === asset && b.starts_at.startsWith('2099-01-20'),
+  );
+  expect(busy).toMatchObject({ user_name: '现有成员', status: 'pending' });
+  expect(Object.keys(busy).sort()).toEqual([
+    'ends_at',
+    'equipment_id',
+    'starts_at',
+    'status',
+    'user_name',
+  ]);
+  expect(snapshot.bookings.some((b: any) => b.id === booked.id)).toBe(false);
+  for (const [sub, role] of [
+    ['anon', 'anon'],
+    [awaiting.uid, 'authenticated'],
+    [pending.uid, 'authenticated'],
+  ]) {
+    await identity(sub, role);
+    expect((await rpc('public.get_snapshot')).busy).toEqual([]);
+  }
 });

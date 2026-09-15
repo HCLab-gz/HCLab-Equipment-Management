@@ -120,3 +120,13 @@ it('演示模式管理员申请需超级管理员审核，普通管理员不能�
   await api.login(email, 'DemoOnly-Review-2026');
   expect(await api.session()).toMatchObject({ role: 'admin', membership_status: 'approved' });
 });
+
+it('演示时段向成员提供预约人姓名，匿名不返回占用信息', async () => {
+  const api = createDemoService(memory());
+  expect((await api.snapshot()).busy).toEqual([]);
+  await api.demoLogin!('user');
+  const busy = (await api.snapshot()).busy.find((b) => b.equipment_id === 'franka');
+  expect(busy).toMatchObject({ user_name: '陈同学', status: 'pending' });
+  expect(busy).not.toHaveProperty('purpose');
+  expect(busy).not.toHaveProperty('user_id');
+});

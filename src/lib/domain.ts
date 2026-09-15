@@ -1,3 +1,4 @@
+import type { BusySlot } from './types';
 export const DEFAULT_CATEGORIES = ['机器人本体', '机器人传感器', '工具'];
 export const ACTIVE_STATUSES = ['pending', 'approved', 'in_use'];
 export const BOOKING_LABELS: Record<string, string> = {
@@ -167,4 +168,28 @@ export function slots(open: string, close: string) {
     max = timeMinutes(close, true);
   for (let min = first; min + 30 <= max; min += 30) result.push(formatMinutes(min));
   return result;
+}
+
+export function slotAvailability(
+  equipment: Parameters<typeof validateBooking>[0] & { id: string },
+  day: string,
+  start: string,
+  busy: BusySlot[],
+  now = new Date(),
+): { kind: 'available' | 'occupied' | 'unavailable'; label: string } {
+  const startsAt = bookingDateTime(day, start),
+    endsAt = bookingDateTime(day, slotEnd(start));
+  // An ongoing reservation still shows its user; fully elapsed slots are closed.
+  if (+new Date(endsAt) <= +now || validateBooking(equipment, startsAt, endsAt, new Date(0)))
+    return { kind: 'unavailable', label: '不开放' };
+  const reservation = busy.find(
+    (b) =>
+      b.equipment_id === equipment.id &&
+      ACTIVE_STATUSES.includes(b.status) &&
+      overlaps(startsAt, endsAt, b.starts_at, b.ends_at),
+  );
+  if (reservation) return { kind: 'occupied', label: reservation.user_name?.trim() || '已占用' };
+  return validateBooking(equipment, startsAt, endsAt, now)
+    ? { kind: 'unavailable', label: '不开放' }
+    : { kind: 'available', label: '可预约' };
 }

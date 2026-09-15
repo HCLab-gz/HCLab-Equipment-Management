@@ -2055,6 +2055,7 @@ footer a {
 }
 .slot-legend {
   display: flex;
+  flex-wrap: wrap;
   gap: 15px;
   font-size: 9px;
   color: #a1b28f;
@@ -2077,6 +2078,10 @@ footer a {
   border-color: #b8d4a0;
 }
 .slot-legend i.occupied {
+  background: #f5ead7;
+  border-color: #dac39b;
+}
+.slot-legend i.unavailable {
   background: #e9ede4;
   border-color: #e9ede4;
 }
@@ -2086,10 +2091,20 @@ footer a {
   gap: 7px;
 }
 .time-slots button {
+  min-width: 0;
   font-size: 10px;
   padding: 10px 2px;
   border-color: #e0e8d6;
   color: #8b9f7a;
+}
+.time-slots button small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .time-slots button.selected {
   background: #e0edcf;
@@ -2098,9 +2113,14 @@ footer a {
 }
 .time-slots button:disabled {
   background: repeating-linear-gradient(135deg, #eef0e8, #eef0e8 4px, #e9ece3 4px, #e9ece3 5px);
-  color: #b5bfaa;
+  color: #7b8475;
   opacity: 1;
   border-color: #e5eadd;
+}
+.time-slots button.occupied:disabled {
+  background: #f5ead7;
+  color: #805d2c;
+  border-color: #dac39b;
 }
 .calendar-help {
   font-size: 9px;

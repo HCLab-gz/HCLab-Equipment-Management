@@ -125,8 +125,9 @@ export function createDemoService(storage: StorageLike): DataService {
         busy: approved
           ? db.bookings
               .filter((b) => ACTIVE_STATUSES.includes(b.status))
-              .map(({ equipment_id, starts_at, ends_at, status }) => ({
+              .map(({ equipment_id, starts_at, ends_at, status, user_name }) => ({
                 equipment_id,
+                user_name,
                 starts_at,
                 ends_at,
                 status,

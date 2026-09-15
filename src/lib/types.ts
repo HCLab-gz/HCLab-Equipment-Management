@@ -53,6 +53,7 @@ export interface Booking {
 }
 export interface BusySlot {
   equipment_id: string;
+  user_name: string;
   starts_at: string;
   ends_at: string;
   status: BookingStatus;
