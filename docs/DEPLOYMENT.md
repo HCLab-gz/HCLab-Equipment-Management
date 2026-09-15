@@ -17,6 +17,8 @@ GitHub Pages 托管 HTML/CSS/JavaScript，无法自身保存跨用户预约或�
 7. `supabase/migrations/007_membership_approval.sql`：新增待审核身份及超级管理员注册审核。执行前须已有已核实的初始管理员账号，详见第 3 节。
 8. `supabase/migrations/008_equipment_hours.sql`：设备开放时间支持按分钟设置，保留完整半小时的预约时段要求。
 9. `supabase/migrations/009_all_day_equipment.sql`：支持全天开放以及截止次日零点的最后半小时预约。
+10. `supabase/migrations/010_slot_booker_names.sql`：已审核成员可在预约时段查看预约人姓名。
+11. `supabase/migrations/011_multi_day_bookings.sql`：支持连续跨天预约，检查整个区间的开放日、开放时间及原有预约冲突。
 10. `supabase/migrations/010_slot_booker_names.sql`：向已审核成员提供占用时段的预约人姓名。
 
 这些是首次安装迁移，001 和 003 不能反复整份执行。现有项目升级应新增迁移文件，不应重置生产数据库。

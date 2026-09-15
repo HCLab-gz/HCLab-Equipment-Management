@@ -60,10 +60,16 @@ export function validateBooking(
   if (!Number.isFinite(+s) || !Number.isFinite(+e) || e <= s) return '请选择有效的起止时间';
   if (eq.status !== 'available') return '该设备当前不可预约';
   if (s <= now) return '预约开始时间必须晚于当前时间';
-  const endsAtMidnight = +e === +new Date(bookingDateTime(dateKey(s), '24:00'));
-  if (dateKey(s) !== dateKey(e) && !endsAtMidnight) return '每次预约最晚到次日零点，跨日请分别申请';
-  const day = new Date(dateKey(s) + 'T12:00:00+08:00').getUTCDay();
-  if (!eq.weekdays.includes(day)) return '所选日期不在设备开放日内';
+  // The end is exclusive: an ending midnight does not occupy the following day.
+  const firstDay = dateKey(s),
+    lastDay = dateKey(new Date(+e - 1)),
+    days = Math.round((+new Date(lastDay) - +new Date(firstDay)) / 86400000) + 1,
+    firstWeekday = new Date(firstDay + 'T12:00:00+08:00').getUTCDay();
+  // Weekly schedules repeat, so at most seven checks cover even a long reservation.
+  for (let i = 0; i < Math.min(days, 7); i++)
+    if (!eq.weekdays.includes((firstWeekday + i) % 7)) return '所选日期不在设备开放日内';
+  if (days > 1 && !isAllDay(eq.open_time, eq.close_time)) return '跨天预约期间包含设备不开放的时段';
+  const endsAtMidnight = dateKey(e) !== lastDay;
   if (
     timeKey(s) < eq.open_time.slice(0, 5) ||
     (endsAtMidnight ? '24:00' : timeKey(e)) > eq.close_time.slice(0, 5)
@@ -74,7 +80,9 @@ export function validateBooking(
     s.getUTCMinutes() % 30 ||
     e.getUTCMinutes() % 30 ||
     s.getUTCSeconds() ||
-    e.getUTCSeconds()
+    e.getUTCSeconds() ||
+    s.getUTCMilliseconds() ||
+    e.getUTCMilliseconds()
   )
     return '请按半小时选择，至少预约 30 分钟';
   return null;
@@ -125,6 +133,7 @@ export function gradeExam(correct: number[], answers: Record<number, number>) {
   };
 }
 export function bookingDateTime(day: string, time: string) {
+  if (!day || !time) return '';
   return time === '24:00' ? `${offsetDay(day, 1)}T00:00:00+08:00` : `${day}T${time}:00+08:00`;
 }
 export function isAllDay(open?: string, close?: string) {

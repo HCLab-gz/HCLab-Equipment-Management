@@ -24,6 +24,12 @@ import {
   timeKey,
 } from '../lib/domain';
 import { EquipmentArt, Badge, Empty } from '../components/ui';
+import {
+  selectBookingSlot,
+  isSlotSelected,
+  type BookingSelection,
+  type BookingRange,
+} from '../lib/booking-range';
 export function EquipmentDetail() {
   const { id } = useParams(),
     { data, user, api, refresh, toast } = useApp(),
@@ -31,13 +37,13 @@ export function EquipmentDetail() {
     [params] = useSearchParams();
   const e = data.equipment.find((e) => e.id === id),
     parent = data.bookings.find((b) => b.id === params.get('renew'));
-  const [day, setDay] = useState(
-      parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1),
-    ),
-    [start, setStart] = useState(parent ? timeKey(new Date(parent.ends_at)) : '09:00'),
-    [end, setEnd] = useState(
-      parent ? timeKey(new Date(+new Date(parent.ends_at) + 1800000)) : '10:00',
-    ),
+  const initialDay = parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1);
+  const [day, setDay] = useState(initialDay),
+    [selection, setSelection] = useState<BookingSelection>({
+      range: { startDay: initialDay, startTime: '09:00', endDay: initialDay, endTime: '10:00' },
+      awaitingEnd: false,
+    }),
+    [selectionError, setSelectionError] = useState(''),
     [purpose, setPurpose] = useState(parent ? `续约：${parent.purpose}` : ''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
@@ -56,9 +62,19 @@ export function EquipmentDetail() {
     const startTime = parent
       ? timeKey(new Date(parent.ends_at))
       : (slots(e.open_time, e.close_time)[0] ?? '');
-    setDay(parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1));
-    setStart(startTime);
-    setEnd(startTime ? slotEnd(startTime) : '');
+    const startDay = parent ? dateKey(new Date(parent.ends_at)) : offsetDay(dateKey(), 1);
+    setDay(startDay);
+    setSelection({
+      range: {
+        startDay,
+        startTime,
+        endDay: startDay,
+        endTime: startTime ? slotEnd(startTime) : '',
+      },
+      awaitingEnd: false,
+    });
+    setSelectionError('');
+    setError('');
   }, [e?.id, parent?.id]);
   if (!e)
     return (
@@ -68,14 +84,42 @@ export function EquipmentDetail() {
     );
   const allSlots = slots(e.open_time, e.close_time),
     ends = allSlots.map(slotEnd),
+    endOptions = e.open_time.slice(0, 5) === '00:00' ? ['00:00', ...ends] : ends,
     availability = allSlots.map((t) => slotAvailability(e, day, t, data.busy, clock));
-  const selected = (t: string) => t >= start && t < end;
+  const { range, awaitingEnd } = selection;
+  const startsAt = bookingDateTime(range.startDay, range.startTime),
+    endsAt = bookingDateTime(range.endDay, range.endTime),
+    duration = (+new Date(endsAt) - +new Date(startsAt)) / 3600000;
+  function updateRange(patch: Partial<BookingRange>) {
+    const next = { ...range, ...patch };
+    if (patch.startDay || patch.startTime) {
+      if (next.endDay < next.startDay) next.endDay = next.startDay;
+      if (
+        next.endTime &&
+        +new Date(bookingDateTime(next.endDay, next.endTime)) <=
+          +new Date(bookingDateTime(next.startDay, next.startTime))
+      )
+        next.endTime = slotEnd(next.startTime);
+    }
+    setSelection({ range: next, awaitingEnd: !next.endTime });
+    setSelectionError('');
+    setError('');
+  }
+  function selectSlot(time: string) {
+    try {
+      setSelection(selectBookingSlot(selection, day, time));
+      setSelectionError('');
+      setError('');
+    } catch (error) {
+      setSelectionError((error as Error).message);
+    }
+  }
   async function book() {
     setError('');
     setBusy(true);
     try {
-      const startsAt = bookingDateTime(day, start),
-        endsAt = bookingDateTime(day, end);
+      if (!range.startDay || !range.startTime || !range.endDay || !range.endTime)
+        throw new Error('请选择完整的开始日期、开始时间和结束日期、结束时间');
       if (findBookingConflict(e!.id, startsAt, endsAt, data.busy))
         throw new Error('该时间已被预约');
       const timeError = validateBooking(e!, startsAt, endsAt);
@@ -182,6 +226,18 @@ export function EquipmentDetail() {
             </div>
             {user ? (
               <>
+                <label className="calendar-date-picker">
+                  查看日期
+                  <input
+                    type="date"
+                    aria-label="查看日历日期"
+                    min={dateKey()}
+                    value={day}
+                    onChange={(ev) => {
+                      if (ev.target.value) setDay(ev.target.value);
+                    }}
+                  />
+                </label>
                 <div className="date-strip">
                   {Array.from({ length: 7 }, (_, i) => offsetDay(dateKey(), i)).map((d) => (
                     <button
@@ -229,13 +285,13 @@ export function EquipmentDetail() {
                         aria-label={label}
                         key={t}
                         disabled={state.kind !== 'available'}
+                        aria-pressed={isSlotSelected(range, day, t)}
                         className={
-                          state.kind === 'available' && selected(t) ? 'selected' : state.kind
+                          state.kind === 'available' && isSlotSelected(range, day, t)
+                            ? 'selected'
+                            : state.kind
                         }
-                        onClick={() => {
-                          setStart(t);
-                          setEnd(ends[i]);
-                        }}
+                        onClick={() => selectSlot(t)}
                       >
                         <span>{t}</span>
                         <small>{state.label}</small>
@@ -243,9 +299,27 @@ export function EquipmentDetail() {
                     );
                   })}
                 </div>
+                <div className="calendar-selection" aria-live="polite">
+                  <strong>{awaitingEnd ? '已选起点' : '已选范围'}</strong>
+                  <span>
+                    {range.startDay} {range.startTime}
+                    {range.endTime &&
+                      ` → ${range.endDay} ${range.endTime === '24:00' ? '24:00（次日 00:00）' : range.endTime}`}
+                  </span>
+                  <small>
+                    {awaitingEnd
+                      ? '请点击结束方格，可切换日期继续选择。'
+                      : '再次点击方格将重新选择起点。'}
+                  </small>
+                </div>
+                {selectionError && (
+                  <p className="inline-error" role="alert">
+                    {selectionError}
+                  </p>
+                )}
                 <p className="muted calendar-help">
-                  点选起始时段，再在右侧调整结束时间。已结束的时段标记为不开放；已占用时段显示预约人姓名，待审批申请也会暂占时段。全天开放设备的最后一格为
-                  23:30—次日 00:00。
+                  第一次点击选择开始，第二次点击选择结束（包含该方格），第三次点击重新选择开始。
+                  切换日期可跨天选择；跨天期间须持续开放且没有其他预约。已结束的时段不开放，已占用时段显示预约人姓名。
                 </p>
               </>
             ) : (
@@ -258,7 +332,7 @@ export function EquipmentDetail() {
         <aside className="booking-panel panel">
           <span className="eyebrow">安排下一次实验</span>
           <h2>{parent ? '申请续约' : '申请机时预约'}</h2>
-          <p className="booking-subtitle">提交申请，待管理员批准后使用。</p>
+          <p className="booking-subtitle">支持跨天预约，提交一份申请，待管理员批准后使用。</p>
           {parent && (
             <div className="info-box warning-box">
               续约应紧接原结束时间。获批前仍须按原时间归还；获批后可在记录查询中衔接使用。
@@ -267,24 +341,26 @@ export function EquipmentDetail() {
           {user ? (
             <>
               <div className="form-stack">
-                <label className="form-field">
-                  预约日期
-                  <input
-                    type="date"
-                    min={dateKey()}
-                    value={day}
-                    onChange={(ev) => setDay(ev.target.value)}
-                  />
-                </label>
                 <div className="form-grid">
+                  <label className="form-field">
+                    开始日期
+                    <input
+                      type="date"
+                      aria-label="开始日期"
+                      min={dateKey()}
+                      value={range.startDay}
+                      onChange={(ev) => {
+                        updateRange({ startDay: ev.target.value });
+                        if (ev.target.value) setDay(ev.target.value);
+                      }}
+                    />
+                  </label>
                   <label className="form-field">
                     开始时间
                     <select
-                      value={start}
-                      onChange={(ev) => {
-                        setStart(ev.target.value);
-                        if (end <= ev.target.value) setEnd(ends[allSlots.indexOf(ev.target.value)]);
-                      }}
+                      aria-label="开始时间"
+                      value={range.startTime}
+                      onChange={(ev) => updateRange({ startTime: ev.target.value })}
                     >
                       {allSlots.map((t) => (
                         <option key={t}>{t}</option>
@@ -292,10 +368,36 @@ export function EquipmentDetail() {
                     </select>
                   </label>
                   <label className="form-field">
+                    结束日期
+                    <input
+                      type="date"
+                      aria-label="结束日期"
+                      min={range.startDay || dateKey()}
+                      value={range.endDay}
+                      onChange={(ev) => {
+                        updateRange({ endDay: ev.target.value });
+                        if (ev.target.value) setDay(ev.target.value);
+                      }}
+                    />
+                  </label>
+                  <label className="form-field">
                     结束时间
-                    <select value={end} onChange={(ev) => setEnd(ev.target.value)}>
-                      {ends.map((t) => (
-                        <option key={t} value={t} disabled={t <= start}>
+                    <select
+                      aria-label="结束时间"
+                      value={range.endTime}
+                      onChange={(ev) => updateRange({ endTime: ev.target.value })}
+                    >
+                      <option value="" disabled>
+                        请选择结束时间
+                      </option>
+                      {endOptions.map((t) => (
+                        <option
+                          key={t}
+                          value={t}
+                          disabled={
+                            +new Date(bookingDateTime(range.endDay, t)) <= +new Date(startsAt)
+                          }
+                        >
                           {t === '24:00' ? '次日 00:00' : t}
                         </option>
                       ))}
@@ -305,6 +407,7 @@ export function EquipmentDetail() {
                 <label className="form-field">
                   使用用途
                   <textarea
+                    aria-label="使用用途"
                     required
                     minLength={2}
                     maxLength={500}
@@ -317,13 +420,7 @@ export function EquipmentDetail() {
               <div className="booking-duration">
                 <span>本次申请时长</span>
                 <strong>
-                  {Math.max(
-                    0,
-                    (+new Date(bookingDateTime(day, end)) -
-                      +new Date(bookingDateTime(day, start))) /
-                      3600000,
-                  ) || 0}{' '}
-                  <small>小时</small>
+                  {Number.isFinite(duration) ? Math.max(0, duration) : '—'} <small>小时</small>
                 </strong>
               </div>
               {!accessState(user) && (
@@ -339,6 +436,10 @@ export function EquipmentDetail() {
                 disabled={
                   busy ||
                   !allSlots.length ||
+                  !range.startDay ||
+                  !range.startTime ||
+                  !range.endDay ||
+                  !range.endTime ||
                   e.status !== 'available' ||
                   !accessState(user) ||
                   purpose.trim().length < 2

@@ -84,6 +84,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/008_equipment_hours.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/009_all_day_equipment.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/010_slot_booker_names.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/011_multi_day_bookings.sql', 'utf8'));
   await db.query("update public.profiles set role='super_admin' where id=$1", [owner]);
 }, 20000);
 afterAll(async () => {
@@ -183,4 +184,41 @@ it('Supabase 时段姓名仅对通过审核的账号可见', async () => {
   expect((await rpc('get_snapshot')).busy).toEqual([]);
   await identity(null, 'anon');
   expect((await rpc('get_snapshot')).busy).toEqual([]);
+});
+
+it('Supabase 跨天申请和审批保留整段时间，并阻止跨天中间的重叠', async () => {
+  await identity(owner);
+  const id = await rpc('save_equipment', [
+    {
+      name: '跨天测试',
+      model: 'TEST',
+      category: '工具',
+      project: '测试',
+      room: '505',
+      location: '指定位置',
+      manager_id: owner,
+      status: 'available',
+      open_time: '00:00',
+      close_time: '24:00',
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      asset_code: randomUUID(),
+    },
+  ]);
+  const input = {
+    equipment_id: id,
+    starts_at: '2099-01-31T23:30+08:00',
+    ends_at: '2099-02-02T01:00+08:00',
+    purpose: '连续实验',
+  };
+  const booked = await rpc('create_booking', [input]);
+  await rpc('booking_action', [booked, 'approve', '']);
+  const records = (await rpc('get_snapshot')).bookings.filter((b: any) => b.equipment_id === id);
+  expect(records).toHaveLength(1);
+  expect(records[0].status).toBe('approved');
+  expect(+new Date(records[0].ends_at) - +new Date(records[0].starts_at)).toBe(25.5 * 3600000);
+  await expect(
+    rpc('create_booking', [
+      { ...input, starts_at: '2099-02-01T10:00+08:00', ends_at: '2099-02-01T10:30+08:00' },
+    ]),
+  ).rejects.toThrow(/已有预约/);
 });

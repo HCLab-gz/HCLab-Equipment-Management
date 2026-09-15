@@ -2127,6 +2127,33 @@ footer a {
   margin-top: 15px;
   line-height: 1.9;
 }
+.calendar-date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.calendar-date-picker input {
+  width: auto;
+  max-width: 180px;
+}
+.calendar-selection {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #f1f6ec;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #567742;
+  overflow-wrap: anywhere;
+}
+.calendar-selection small {
+  font-size: 11px;
+}
 .records-panel {
   padding: 0;
 }

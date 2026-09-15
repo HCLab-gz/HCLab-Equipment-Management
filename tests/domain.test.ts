@@ -21,6 +21,8 @@ describe('预约边界', () => {
     expect(bookingDateTime('2099-01-31', '24:00')).toBe('2099-02-01T00:00:00+08:00');
     expect(bookingDateTime('2099-12-31', '24:00')).toBe('2100-01-01T00:00:00+08:00');
     expect(bookingDateTime('2099-01-05', '23:30')).toBe('2099-01-05T23:30:00+08:00');
+    expect(bookingDateTime('', '24:00')).toBe('');
+    expect(bookingDateTime('2099-01-05', '')).toBe('');
   });
   it('全天开放包含 48 格，最后一格结束于次日零点', () => {
     expect(equipmentScheduleError('00:00', '24:00', [1])).toBeNull();
@@ -30,7 +32,7 @@ describe('预约边界', () => {
     expect(slots('23:30', '24:00')).toEqual(['23:30']);
     expect(slotEnd('23:30')).toBe('24:00');
   });
-  it('全天预约允许次日零点结束，按开始日检查开放日，仍拒绝跨到次日其他时刻', () => {
+  it('零点结束不占用结束日，跨天包含非开放日时拒绝', () => {
     const allDay = { ...equipment, open_time: '00:00', close_time: '24:00', weekdays: [1] };
     expect(validateBooking(allDay, '2099-01-05T23:30+08:00', '2099-01-06T00:00+08:00')).toBeNull();
     expect(validateBooking(allDay, '2099-01-05T00:00+08:00', '2099-01-06T00:00+08:00')).toBeNull();
@@ -50,6 +52,49 @@ describe('预约边界', () => {
         '2099-01-06T00:00+08:00',
       ),
     ).toBeTruthy();
+  });
+  it('全天设备一次预约可以跨多天、月底和年底', () => {
+    const allDay = { ...equipment, open_time: '00:00', close_time: '24:00' };
+    for (const [start, end] of [
+      ['2099-01-05T23:30+08:00', '2099-01-06T01:30+08:00'],
+      ['2099-01-05T09:00+08:00', '2099-01-08T15:00+08:00'],
+      ['2099-01-31T23:30+08:00', '2099-02-02T00:00+08:00'],
+      ['2099-12-31T23:30+08:00', '2100-01-02T08:00+08:00'],
+    ])
+      expect(validateBooking(allDay, start, end)).toBeNull();
+  });
+  it('跨天检查中间开放日和夜间时段，长预约也不能跳过每周休息日', () => {
+    const allDay = { ...equipment, open_time: '00:00', close_time: '24:00', weekdays: [1, 3] };
+    expect(validateBooking(allDay, '2099-01-05T23:30+08:00', '2099-01-07T01:00+08:00')).toMatch(
+      /开放日/,
+    );
+    expect(
+      validateBooking(
+        { ...allDay, weekdays: [0, 1, 2, 3, 4, 5] },
+        '2099-01-05T09:00+08:00',
+        '2099-02-05T09:00+08:00',
+      ),
+    ).toMatch(/开放日/);
+    expect(validateBooking(equipment, '2099-01-05T21:00+08:00', '2099-01-06T09:00+08:00')).toMatch(
+      /不开放|开放时段/,
+    );
+  });
+  it('跨天仍拒绝倒置、过去和非半小时的起止时间', () => {
+    const allDay = { ...equipment, open_time: '00:00', close_time: '24:00' };
+    expect(
+      validateBooking(allDay, '2099-01-06T09:00+08:00', '2099-01-05T10:00+08:00'),
+    ).toBeTruthy();
+    expect(validateBooking(allDay, '2099-01-05T09:00+08:00', '2099-01-06T10:15+08:00')).toMatch(
+      /半小时/,
+    );
+    expect(
+      validateBooking(
+        allDay,
+        '2099-01-05T09:00+08:00',
+        '2099-01-06T10:00+08:00',
+        new Date('2099-01-05T10:00+08:00'),
+      ),
+    ).toMatch(/当前时间/);
   });
   it('23:59 和非半点开放时间只生成开放范围内完整的半小时时段', () => {
     expect(slots('23:00', '23:59')).toEqual(['23:00']);
