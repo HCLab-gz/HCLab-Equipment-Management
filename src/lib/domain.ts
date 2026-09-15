@@ -1,5 +1,4 @@
 import type { BusySlot } from './types';
-export const DEFAULT_CATEGORIES = ['机器人本体', '机器人传感器', '工具'];
 export const ACTIVE_STATUSES = ['pending', 'approved', 'in_use'];
 export const BOOKING_LABELS: Record<string, string> = {
   pending: '待审批',

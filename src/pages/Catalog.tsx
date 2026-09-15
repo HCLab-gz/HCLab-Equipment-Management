@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, RotateCcw, LayoutGrid, List } from 'lucide-react';
 import { useApp } from '../lib/store';
-import { DEFAULT_CATEGORIES } from '../lib/domain';
 import { EquipmentCard, Empty } from '../components/ui';
 export function Catalog() {
   const { data } = useApp(),
@@ -14,7 +13,7 @@ export function Catalog() {
     [available, setAvailable] = useState(false),
     [compact, setCompact] = useState(false);
   const room = params.get('room') ?? '',
-    categories = [...new Set([...DEFAULT_CATEGORIES, ...data.equipment.map((e) => e.category)])],
+    categories = [...new Set(data.equipment.map((e) => e.category))],
     projects = [...new Set(data.equipment.map((e) => e.project))],
     locations = [
       ...new Set(

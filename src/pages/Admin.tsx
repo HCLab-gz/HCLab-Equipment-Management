@@ -15,7 +15,6 @@ import { isAdministrator, isApproved, isSuperAdministrator, ROLE_LABELS } from '
 import { useApp } from '../lib/store';
 import { equipmentImages, imageExtension } from '../lib/images';
 import {
-  DEFAULT_CATEGORIES,
   cnDate,
   accessState,
   equipmentScheduleError,
@@ -63,7 +62,7 @@ export function Admin() {
       name: '',
       model: '',
       asset_code: '',
-      category: '机器人本体',
+      category: '',
       project: '公共设备',
       room: '504',
       location: '',
@@ -398,13 +397,11 @@ export function Admin() {
                   onChange={(e) => update('category', e.target.value)}
                 />
                 <datalist id="categories">
-                  {[
-                    ...new Set([...DEFAULT_CATEGORIES, ...data.equipment.map((e) => e.category)]),
-                  ].map((c) => (
+                  {[...new Set(data.equipment.map((e) => e.category))].map((c) => (
                     <option key={c}>{c}</option>
                   ))}
                 </datalist>
-                <small>可选择预设分类，或直接输入新分类。</small>
+                <small>输入新分类，保存设备后自动创建；也可选择已有分类。</small>
               </label>
               <label className="form-field">
                 设备状态
